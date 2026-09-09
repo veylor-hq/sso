@@ -14,8 +14,6 @@ registry:
 
 ssh:
   user: kamal
-  keys:
-    - ~/.ssh/kamal_ci_key
 
 builder:
   arch: amd64

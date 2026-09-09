@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+SERVICE="${KAMAL_SERVICE:-$SERVICE_NAME}"
+if [ -z "$SERVICE" ]; then
+  SERVICE="Veylor SSO"
+fi
+
+export TELEGRAM_MESSAGE_THREAD_ID="${TELEGRAM_DEPLOY_THREAD_ID:-${TELEGRAM_MESSAGE_THREAD_ID:-3}}"
+
+"$ROOT_DIR/scripts/notify_telegram.sh" success "$SERVICE" "Deployment complete & verified live!"

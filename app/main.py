@@ -110,12 +110,13 @@ async def security_and_logging_middleware(request: Request, call_next):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["X-Request-ID"] = request_id
 
-    # Content Security Policy (allows self and Google Identity Services for login)
+    # Content Security Policy (allows self, Tailwind CDN, Google Fonts, and Google Identity)
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' https://accounts.google.com; "
-        "style-src 'self' 'unsafe-inline'; "
-        "frame-src https://accounts.google.com; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://accounts.google.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; "
+        "font-src 'self' https://fonts.gstatic.com data:; "
+        "frame-src 'self' https://accounts.google.com; "
         "connect-src 'self' https://accounts.google.com; "
         "img-src 'self' data: https:;"
     )
