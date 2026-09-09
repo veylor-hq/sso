@@ -36,7 +36,6 @@ RUN pip install --upgrade pip setuptools wheel && \
 
 # Copy application source
 COPY app/ ./app/
-COPY keys/ ./keys/ 2>/dev/null || true
 
 # Create non-root user
 RUN useradd -m -u 1000 veylor && \
