@@ -1,0 +1,276 @@
+{% extends "base.html" %} {% block title %}Terms of Service - Veylor Identity{%
+endblock %} {% block content %}
+<div
+  class="w-full max-w-3xl bg-[#161616] border border-[#333333] p-8 sm:p-10 my-8"
+>
+  <!-- Header Badge -->
+  <div class="mb-8 border-b border-[#262626] pb-6">
+    <div
+      class="inline-flex items-center gap-2 border border-[#333333] bg-[#1a1a1a] px-2.5 py-1 text-[11px] font-mono text-[#a1a1aa] uppercase tracking-widest mb-3"
+    >
+      <span class="h-1.5 w-1.5 bg-[#fafafa]"></span>
+      Legal &bull; Identity Core
+    </div>
+    <h1 class="text-2xl font-bold tracking-tight text-[#fafafa] uppercase">
+      Terms of Service
+    </h1>
+    <p class="text-xs text-[#a1a1aa] mt-1 font-mono">
+      Last updated: September 2026 &bull; Effective immediately
+    </p>
+  </div>
+
+  <!-- Terms Body -->
+  <div class="space-y-8 text-xs leading-relaxed text-[#d4d4d8] font-sans">
+    <section>
+      <h2
+        class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2"
+      >
+        1. Acceptance of Terms & Ecosystem Scope
+      </h2>
+      <p class="mb-2">
+        These Terms of Service ("Terms") constitute a legally binding agreement
+        between you ("User", "you") and
+        <strong class="text-[#fafafa]">Veylor Systems</strong> ("Veylor", "we",
+        "us", or "our"), governing your access to and use of the
+        <strong class="text-[#fafafa]">Veylor Single Sign-On (SSO)</strong>
+        identity platform, located at
+        <code
+          class="font-mono text-[#fafafa] bg-[#111111] px-1 py-0.5 border border-[#333333]"
+          >https://sso.veylor.dev</code
+        >, including all associated authentication APIs, authorization servers,
+        and identity management portals (collectively, the "Service").
+      </p>
+      <p>
+        Veylor SSO serves as the unified authentication and authorization
+        provider across the Veylor ecosystem and authorized third-party relying
+        parties, including but not limited to
+        <strong class="text-[#fafafa]">eGarage</strong> (<code
+          class="font-mono text-[#fafafa] bg-[#111111] px-1 py-0.5 border border-[#333333]"
+          >https://egarageapp.uk</code
+        >), Relay, Pager, and Warden. By creating an account, authenticating
+        through the Service, or utilizing any Veylor authentication endpoint,
+        you agree to be bound by these Terms.
+      </p>
+    </section>
+
+    <section>
+      <h2
+        class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2"
+      >
+        2. Account Provisioning & Security Responsibilities
+      </h2>
+      <p class="mb-2">
+        To access services within the Veylor ecosystem, you must register a
+        universal Veylor identity account. You agree to:
+      </p>
+      <ul class="list-disc pl-5 space-y-1.5 text-[#a1a1aa]">
+        <li>
+          Provide accurate, current, and complete legal name and valid email
+          address during account provisioning.
+        </li>
+        <li>
+          Complete mandatory email verification to activate production relying
+          party access and administrative privileges.
+        </li>
+        <li>
+          Maintain the absolute confidentiality and security of your account
+          credentials, passwords, and active session tokens.
+        </li>
+        <li>
+          Never share credentials, reuse sensitive passwords from other
+          services, or delegate account access to unauthorized parties.
+        </li>
+        <li>
+          Promptly notify Veylor Security (<code
+            class="font-mono text-[#fafafa]"
+            >contact@veylor.dev</code
+          >) immediately upon suspecting any unauthorized access, token leakage,
+          or credential compromise.
+        </li>
+      </ul>
+      <p class="mt-2 text-[#a1a1aa]">
+        All passwords are protected using the memory-hard
+        <strong class="text-[#fafafa]">Argon2id</strong> cryptographic hashing
+        algorithm. Veylor will never ask for your plaintext password via email,
+        phone, or direct message.
+      </p>
+    </section>
+
+    <section>
+      <h2
+        class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2"
+      >
+        3. OAuth 2.0, OpenID Connect & Authorization Grants
+      </h2>
+      <p class="mb-2">
+        The Service implements standard RFC 6749 (OAuth 2.0), RFC 7636 (PKCE),
+        and OpenID Connect Core 1.0 specifications.
+      </p>
+      <ul class="list-disc pl-5 space-y-1.5 text-[#a1a1aa]">
+        <li>
+          <strong class="text-[#fafafa]">Authorization Codes & PKCE:</strong>
+          Authorization codes are strictly single-use, cryptographically
+          generated, short-lived (10 minutes), and bound to SHA-256 code
+          challenges (<code class="font-mono text-[#fafafa]">S256</code>). Any
+          attempt to replay, tamper with, or exchange an expired code will
+          result in immediate revocation.
+        </li>
+        <li>
+          <strong class="text-[#fafafa]">Access & ID Tokens:</strong> Tokens
+          issued by Veylor SSO are digitally signed with RSA (RS256) public keys
+          published at
+          <code class="font-mono text-[#fafafa]">/.well-known/jwks.json</code>.
+          Access tokens (<code class="font-mono text-[#fafafa]"
+            >typ: at+jwt</code
+          >) and ID tokens are strictly scoped to granted permissions.
+        </li>
+        <li>
+          <strong class="text-[#fafafa]">Relying Party Delegation:</strong> When
+          authorizing an external application (such as eGarage), you grant that
+          relying party permission to receive identity claims (<code
+            class="font-mono text-[#fafafa]"
+            >sub</code
+          >, <code class="font-mono text-[#fafafa]">email</code>,
+          <code class="font-mono text-[#fafafa]">name</code>) within the
+          consented scopes. Veylor is not responsible for relying party actions
+          beyond the identity layer.
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <h2
+        class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2"
+      >
+        4. Acceptable Use & System Integrity
+      </h2>
+      <p class="mb-2">
+        You agree not to misuse, disrupt, or attack the Service or its
+        underlying infrastructure. Specifically prohibited activities include:
+      </p>
+      <ul class="list-disc pl-5 space-y-1.5 text-[#a1a1aa]">
+        <li>
+          Conducting automated brute-force attacks, credential stuffing, or
+          password-spraying against authentication endpoints.
+        </li>
+        <li>
+          Attempting to forge, manipulate, or sign JSON Web Tokens (JWTs)
+          without authorized private keys.
+        </li>
+        <li>
+          Bypassing or attempting to bypass rate limits, anti-CSRF protections,
+          or client validation checks.
+        </li>
+        <li>
+          Reverse-engineering, decompiling, or exploiting authorization flows to
+          gain unauthorized access to relying party resources.
+        </li>
+        <li>
+          Using the Service to transmit spam, phishing campaigns, malware, or
+          unlawful content.
+        </li>
+      </ul>
+      <p class="mt-2 text-[#a1a1aa]">
+        Violations of acceptable use policies may result in immediate IP
+        banning, credential revocation, and reporting to competent law
+        enforcement agencies.
+      </p>
+    </section>
+
+    <section>
+      <h2
+        class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2"
+      >
+        5. Account Termination & Session Revocation
+      </h2>
+      <p class="mb-2">
+        We reserve the right to suspend, lock, or terminate any account, API
+        client, or browser session at any time without prior notice if we
+        reasonably believe you have breached these Terms, compromised platform
+        integrity, or if required by law.
+      </p>
+      <p>
+        Users may terminate their account or revoke active sessions at any time
+        via the Veylor account management portal or by submitting an account
+        deletion request to
+        <code class="font-mono text-[#fafafa]">support@veylor.dev</code>.
+      </p>
+    </section>
+
+    <section>
+      <h2
+        class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2"
+      >
+        6. Service Availability & Disclaimers
+      </h2>
+      <p class="mb-2">
+        The Service is provided on an
+        <strong class="text-[#fafafa]">"AS IS"</strong> and
+        <strong class="text-[#fafafa]">"AS AVAILABLE"</strong> basis without
+        warranties of any kind, whether express, implied, or statutory. While
+        Veylor employs defense-grade security protocols, high-availability
+        infrastructure, and automated backups, we do not warrant that
+        authentication services will be uninterrupted, error-free, or entirely
+        resilient against external distributed denial of service (DDoS) events.
+      </p>
+      <p>
+        To the maximum extent permitted by applicable law, Veylor Systems shall
+        not be liable for any indirect, incidental, consequential, or punitive
+        damages, or loss of profits, data, or business goodwill arising from
+        your use of or inability to use the Service.
+      </p>
+    </section>
+
+    <section>
+      <h2
+        class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2"
+      >
+        7. Governing Law & Jurisdiction
+      </h2>
+      <p>
+        These Terms are governed by and construed in accordance with the laws of
+        <strong class="text-[#fafafa]">England and Wales</strong>. Any disputes,
+        controversies, or claims arising out of or in connection with these
+        Terms or your use of the Service shall be subject to the exclusive
+        jurisdiction of the courts of England and Wales.
+      </p>
+    </section>
+
+    <section>
+      <h2
+        class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2"
+      >
+        8. Contact Information
+      </h2>
+      <p>
+        For security vulnerabilities, please contact our security team at
+        <a
+          href="mailto:contact@veylor.dev"
+          class="text-[#fafafa] underline hover:text-[#e5e5e5]"
+          >contact@veylor.dev</a
+        >. For legal, privacy, or general operational questions, contact
+        <a
+          href="mailto:support@veylor.dev"
+          class="text-[#fafafa] underline hover:text-[#e5e5e5]"
+          >support@veylor.dev</a
+        >.
+      </p>
+    </section>
+  </div>
+
+  <!-- Return Link -->
+  <div
+    class="mt-8 pt-6 border-t border-[#262626] flex items-center justify-between text-[11px] font-mono text-[#71717a] uppercase"
+  >
+    <a href="/" class="text-[#fafafa] hover:underline font-medium">
+      &larr; Return to Central Auth
+    </a>
+    <a
+      href="/privacy"
+      class="text-[#a1a1aa] hover:text-[#fafafa] hover:underline"
+    >
+      Privacy Policy &rarr;
+    </a>
+  </div>
+</div>
+{% endblock %}

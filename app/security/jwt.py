@@ -48,7 +48,8 @@ class KeyManager:
                 format=serialization.PrivateFormat.PKCS8,
                 encryption_algorithm=serialization.NoEncryption(),
             )
-            with open(key_path, "wb") as f:
+            fd = os.open(str(key_path), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with open(fd, "wb") as f:
                 f.write(pem)
 
         self._public_key = self._private_key.public_key()
@@ -186,11 +187,26 @@ def decode_and_verify_token(
     token: str,
     expected_aud: Optional[str] = None,
     expected_issuer: Optional[str] = None,
+    expected_typ: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Decode and verify an RSA-signed token using the active public key."""
+    """Decode and verify an RSA-signed token using the active public key.
+    
+    If expected_typ is specified (e.g. 'at+jwt'), enforces that the token's typ header matches.
+    """
     settings = get_settings()
     issuer = expected_issuer or settings.SSO_ISSUER
     km = get_key_manager()
+
+    if expected_typ:
+        try:
+            unverified_header = jwt.get_unverified_header(token)
+            actual_typ = unverified_header.get("typ", "")
+            if actual_typ.lower() != expected_typ.lower():
+                raise PyJWTError(f"Invalid token type: expected '{expected_typ}', got '{actual_typ}'")
+        except PyJWTError:
+            raise
+        except Exception as e:
+            raise PyJWTError(f"Failed to inspect token header: {str(e)}")
 
     options = {
         "verify_signature": True,

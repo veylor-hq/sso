@@ -23,8 +23,20 @@ def get_google_jwks_client() -> PyJWKClient:
     return _jwks_client
 
 
+def _is_email_verified(claims: Dict[str, Any]) -> bool:
+    verified = claims.get("email_verified")
+    if isinstance(verified, bool):
+        return verified
+    if isinstance(verified, str):
+        return verified.lower() == "true"
+    return False
+
+
 async def verify_google_id_token(token_str: str) -> Optional[Dict[str, Any]]:
-    """Verify a Google ID token and return verified claims, or None if invalid."""
+    """Verify a Google ID token and return verified claims, or None if invalid.
+    
+    Strictly enforces that Google has verified the email address to prevent account takeover.
+    """
     settings = get_settings()
     expected_aud = settings.GOOGLE_CLIENT_ID
 
@@ -40,8 +52,11 @@ async def verify_google_id_token(token_str: str) -> Optional[Dict[str, Any]]:
             issuer=GOOGLE_ISSUERS,
             options={"verify_exp": True},
         )
-        if claims.get("email"):
+        if claims.get("email") and _is_email_verified(claims):
             return claims
+        if claims.get("email") and not _is_email_verified(claims):
+            logger.warning("Rejected Google ID token: email is unverified (%s)", claims.get("email"))
+            return None
     except Exception as e:
         logger.debug("Local Google JWKS validation failed, trying tokeninfo endpoint: %s", e)
 
@@ -52,8 +67,11 @@ async def verify_google_id_token(token_str: str) -> Optional[Dict[str, Any]]:
             if resp.status_code == 200:
                 data = resp.json()
                 if data.get("aud") == expected_aud and data.get("iss") in GOOGLE_ISSUERS:
-                    if data.get("email"):
+                    if data.get("email") and _is_email_verified(data):
                         return data
+                    if data.get("email") and not _is_email_verified(data):
+                        logger.warning("Rejected Google tokeninfo: email is unverified (%s)", data.get("email"))
+                        return None
             logger.warning("Google tokeninfo rejected token: %s", resp.text)
     except Exception as e:
         logger.error("Error connecting to Google tokeninfo: %s", e)

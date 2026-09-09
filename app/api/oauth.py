@@ -200,10 +200,25 @@ async def token(
 
 
 @router.get("/userinfo")
-async def userinfo(user: User = Depends(get_user_from_bearer_token)):
-    """OpenID Connect UserInfo Endpoint. Requires valid Bearer access token."""
-    # Return user profile claims
-    claims = get_oidc_claims_for_user(user, scopes=["openid", "profile", "email"])
+async def userinfo(
+    request: Request,
+    user: User = Depends(get_user_from_bearer_token),
+):
+    """OpenID Connect UserInfo Endpoint. Requires valid Bearer access token with openid scope."""
+    token_claims = getattr(request.state, "token_claims", {})
+    scope_str = token_claims.get("scope", "")
+    granted_scopes = [s.strip() for s in scope_str.split() if s.strip()]
+
+    # OIDC Core 1.0 Section 5.3: UserInfo endpoint requires 'openid' scope
+    if "openid" not in granted_scopes:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access token missing required 'openid' scope.",
+            headers={"WWW-Authenticate": 'Bearer error="insufficient_scope", scope="openid"'},
+        )
+
+    # Return only claims corresponding to granted scopes
+    claims = get_oidc_claims_for_user(user, scopes=granted_scopes)
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content=claims,

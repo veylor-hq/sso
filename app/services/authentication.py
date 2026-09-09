@@ -3,6 +3,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple
 from app.config import get_settings
+from app.models.session import BrowserSession
 from app.models.user import User
 from app.models.token_records import ActionToken
 from app.security.passwords import (
@@ -14,11 +15,16 @@ from app.security.passwords import (
 from app.security.random import generate_opaque_token, hash_token
 from app.services.users import get_user_by_email, get_user_by_id
 
+# Pre-computed dummy Argon2id hash used to normalize verification latency and eliminate user enumeration side-channels
+_DUMMY_ARGON2_HASH = "$argon2id$v=19$m=65536,t=3,p=4$c29tZXNhbHQAAAAAAAAAAA$q114s88P6W7uXj2N+Z9y/gBv9mZ1"
+
 
 async def authenticate_user(email: str, password: str) -> Tuple[Optional[User], Optional[str]]:
     """Verify user credentials. Returns (User, None) on success, or (None, error_reason) on failure."""
     user = await get_user_by_email(email)
     if not user:
+        # Equalize execution timing to prevent email enumeration
+        verify_password(password, _DUMMY_ARGON2_HASH)
         return None, "Invalid email or password."
 
     if user.disabled:
@@ -84,11 +90,18 @@ async def reset_password_with_token(raw_token: str, new_password: str) -> Tuple[
     if not user:
         return False, "User account not found."
 
+    now = datetime.now(timezone.utc)
     user.password_hash = hash_password(new_password)
-    user.updated_at = datetime.now(timezone.utc)
+    user.updated_at = now
     await user.save()
 
-    action_token.used_at = datetime.now(timezone.utc)
+    # Invalidate all active browser sessions to kick out attackers and terminate compromised sessions
+    await BrowserSession.find(
+        BrowserSession.user_id == user.id,
+        BrowserSession.revoked_at == None,
+    ).update({"$set": {"revoked_at": now}})
+
+    action_token.used_at = now
     await action_token.save()
 
     return True, "Password has been successfully reset."

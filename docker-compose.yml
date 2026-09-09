@@ -43,7 +43,7 @@ services:
     container_name: veylor-mongodb
     restart: unless-stopped
     ports:
-      - "27017:27017"
+      - "127.0.0.1:27017:27017"
     volumes:
       - mongodb_data:/data/db
     healthcheck:
@@ -58,7 +58,7 @@ services:
     container_name: veylor-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
 
@@ -67,8 +67,8 @@ services:
     container_name: veylor-mailpit
     restart: unless-stopped
     ports:
-      - "1025:1025" # SMTP port
-      - "8025:8025" # Web UI
+      - "127.0.0.1:1025:1025" # SMTP port
+      - "127.0.0.1:8025:8025" # Web UI
     environment:
       MP_MAX_MESSAGES: 500
 

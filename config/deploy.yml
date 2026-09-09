@@ -43,7 +43,7 @@ env:
     SESSION_COOKIE_NAME: veylor_session
     SESSION_COOKIE_SECURE: true
     SESSION_COOKIE_SAMESITE: lax
-    SESSION_COOKIE_DOMAIN: .veylor.dev
+    SESSION_COOKIE_DOMAIN: sso.veylor.dev
     ACCESS_TOKEN_TTL_SECONDS: 3600
     AUTHORIZATION_CODE_TTL_SECONDS: 60
     SIGNING_KEY_PATH: /app/keys/private_key.pem

@@ -458,12 +458,21 @@ async def reset_user_password(user_id: str, payload: ResetUserPasswordRequest):
         user.password_hash = hash_password(payload.new_password)
         user.updated_at = datetime.now(timezone.utc)
         await user.save()
+        # Revoke all active sessions on administrative password reset
+        now = datetime.now(timezone.utc)
+        await BrowserSession.find(
+            BrowserSession.user_id == user.id,
+            BrowserSession.revoked_at == None,
+        ).update({"$set": {"revoked_at": now}})
         return {"message": f"Password updated directly for {user.email}"}
 
     if payload.send_reset_email:
-        token = await create_password_reset_token(user.id)
-        await send_password_reset_email(user.email, token)
-        return {"message": f"Password reset email dispatched to {user.email}"}
+        res = await create_password_reset_token(user.email)
+        if res:
+            _, token = res
+            await send_password_reset_email(user.email, token)
+            return {"message": f"Password reset email dispatched to {user.email}"}
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unable to generate password reset token")
 
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Specify either new_password or send_reset_email")
 

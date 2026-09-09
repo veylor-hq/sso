@@ -21,6 +21,36 @@ async def rate_limit_login(request: Request):
         )
 
 
+async def rate_limit_register(request: Request):
+    """Enforce rate limits on registration attempts by IP."""
+    ip = get_client_ip(request)
+    allowed = await check_rate_limit(
+        key=f"register:{ip}",
+        max_requests=10,
+        window_seconds=60,
+    )
+    if not allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many registration attempts. Please try again in a minute.",
+        )
+
+
+async def rate_limit_forgot_password(request: Request):
+    """Enforce rate limits on password reset and verification emails."""
+    ip = get_client_ip(request)
+    allowed = await check_rate_limit(
+        key=f"forgot_pw:{ip}",
+        max_requests=10,
+        window_seconds=60,
+    )
+    if not allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many password reset requests. Please slow down.",
+        )
+
+
 async def rate_limit_token(request: Request):
     """Enforce rate limits on OAuth /token endpoint."""
     settings = get_settings()

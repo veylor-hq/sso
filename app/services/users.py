@@ -105,6 +105,8 @@ async def get_or_create_google_user(
 
     now = datetime.now(timezone.utc)
     if user:
+        if user.google_sub and user.google_sub != google_sub:
+            raise ValueError("This account is already associated with a different Google identity.")
         if not user.google_sub:
             user.google_sub = google_sub
         user.email_verified = True

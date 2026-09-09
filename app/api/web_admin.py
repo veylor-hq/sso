@@ -7,8 +7,12 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, Res
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
+import hashlib
+import hmac
+
 from app.api.admin import get_system_insights
 from app.config import get_settings
+from app.dependencies.rate_limit import rate_limit_login
 from app.models.oauth_client import OAuthClient
 from app.models.session import BrowserSession
 from app.models.user import User
@@ -20,19 +24,36 @@ from app.services.users import get_user_by_id
 router = APIRouter(prefix="/admin", include_in_schema=False)
 templates = Jinja2Templates(directory="app/templates")
 
-ADMIN_COOKIE_NAME = "veylor_admin_key"
+ADMIN_COOKIE_NAME = "veylor_admin_session"
+
+
+def get_admin_session_token() -> str:
+    """Generate an HMAC-derived authentication token for admin web sessions.
+    
+    Ensures the raw master ADMIN_API_KEY is never exposed in client browser cookies.
+    """
+    settings = get_settings()
+    return hmac.new(
+        settings.SECRET_KEY.encode(),
+        b"veylor_admin_session_token",
+        hashlib.sha256,
+    ).hexdigest()
 
 
 async def check_admin_access(request: Request):
     """Verify admin access via master key cookie or active admin user session."""
     settings = get_settings()
 
-    # 1. Master admin key cookie
-    admin_key_cookie = request.cookies.get(ADMIN_COOKIE_NAME)
-    if admin_key_cookie and constant_time_compare(admin_key_cookie, settings.ADMIN_API_KEY):
+    # 1. HMAC-derived admin session cookie or legacy admin key cookie
+    admin_session = request.cookies.get(ADMIN_COOKIE_NAME)
+    if admin_session and constant_time_compare(admin_session, get_admin_session_token()):
         return True, None
 
-    # 2. Session-based user check
+    legacy_key = request.cookies.get("veylor_admin_key")
+    if legacy_key and (constant_time_compare(legacy_key, settings.ADMIN_API_KEY) or constant_time_compare(legacy_key, get_admin_session_token())):
+        return True, None
+
+    # 2. Session-based user check with email verification enforcement
     session_token = request.cookies.get(settings.SESSION_COOKIE_NAME)
     if session_token:
         session = await get_session_by_token(session_token)
@@ -40,7 +61,7 @@ async def check_admin_access(request: Request):
             user = await get_user_by_id(session.user_id)
             if user and not user.disabled:
                 admin_emails = [e.lower() for e in settings.ADMIN_EMAILS]
-                if user.is_admin or user.email.lower() in admin_emails:
+                if user.is_admin or (user.email_verified and user.email.lower() in admin_emails):
                     return True, user
 
     return False, None
@@ -77,11 +98,20 @@ async def admin_login_page(request: Request, error: Optional[str] = None):
     return _render_admin(request, "admin/login.html", {"error": error})
 
 
-@router.post("/login")
+@router.post("/login", dependencies=[Depends(rate_limit_login)])
 async def admin_login_submit(
     request: Request,
     admin_key: str = Form(...),
+    csrf_token: Optional[str] = Form(default=None),
 ):
+    if not verify_csrf_token(request, csrf_token):
+        return _render_admin(
+            request,
+            "admin/login.html",
+            {"error": "Security token mismatch. Please try again."},
+            response_status=400,
+        )
+
     settings = get_settings()
     if not constant_time_compare(admin_key.strip(), settings.ADMIN_API_KEY):
         return _render_admin(
@@ -94,7 +124,7 @@ async def admin_login_submit(
     response = RedirectResponse(url="/admin/insights", status_code=status.HTTP_302_FOUND)
     response.set_cookie(
         key=ADMIN_COOKIE_NAME,
-        value=settings.ADMIN_API_KEY,
+        value=get_admin_session_token(),
         max_age=86400,  # 24 hours
         httponly=True,
         secure=settings.SESSION_COOKIE_SECURE,
@@ -106,8 +136,15 @@ async def admin_login_submit(
 
 @router.get("/logout")
 async def admin_logout():
+    settings = get_settings()
     response = RedirectResponse(url="/admin/login", status_code=status.HTTP_302_FOUND)
-    response.delete_cookie(key=ADMIN_COOKIE_NAME, path="/admin")
+    response.delete_cookie(
+        key=ADMIN_COOKIE_NAME,
+        path="/admin",
+        secure=settings.SESSION_COOKIE_SECURE,
+        httponly=True,
+        samesite="lax",
+    )
     return response
 
 

@@ -8,6 +8,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.config import get_settings
 from app.dependencies.auth import get_optional_user, require_session_user
+from app.dependencies.rate_limit import rate_limit_login
 from app.models.user import User
 from app.security.csrf import CSRF_COOKIE_NAME, generate_csrf_token, verify_csrf_token
 from app.security.google import verify_google_id_token
@@ -32,6 +33,24 @@ from app.services.users import create_user, get_or_create_google_user
 
 router = APIRouter(include_in_schema=False)
 templates = Jinja2Templates(directory="app/templates")
+
+
+def is_safe_redirect_url(url: Optional[str]) -> bool:
+    """Validate that redirect target is a safe relative path.
+    
+    Rejects None, empty strings, absolute URLs, protocol-relative URLs (//evil.com),
+    and backslash bypasses (/\\evil.com).
+    """
+    if not url:
+        return False
+    clean = url.strip()
+    if not clean.startswith("/"):
+        return False
+    if clean.startswith("//") or clean.startswith("/\\"):
+        return False
+    if "://" in clean or "\\" in clean:
+        return False
+    return True
 
 
 def _render_with_csrf(
@@ -101,14 +120,14 @@ async def login_page(
     user: Optional[User] = Depends(get_optional_user),
 ):
     if user:
-        if return_to and return_to.startswith("/"):
+        if is_safe_redirect_url(return_to):
             return RedirectResponse(url=return_to, status_code=status.HTTP_302_FOUND)
         return RedirectResponse(url="/account", status_code=status.HTTP_302_FOUND)
 
     return _render_with_csrf(request, "login.html", {"return_to": return_to or ""})
 
 
-@router.post("/login")
+@router.post("/login", dependencies=[Depends(rate_limit_login)])
 async def login_submit(
     request: Request,
     email: str = Form(...),
@@ -137,9 +156,7 @@ async def login_submit(
     ua = request.headers.get("User-Agent")
     _, raw_token = await create_session(user_id=user.id, ip_address=ip, user_agent=ua)
 
-    target_url = "/account"
-    if return_to and return_to.startswith("/"):
-        target_url = return_to
+    target_url = return_to if is_safe_redirect_url(return_to) else "/account"
 
     response = RedirectResponse(url=target_url, status_code=status.HTTP_302_FOUND)
     _set_auth_cookie(response, raw_token)
@@ -216,9 +233,7 @@ async def auth_google(
     ua = request.headers.get("User-Agent")
     _, raw_token = await create_session(user_id=user.id, ip_address=ip, user_agent=ua)
 
-    target_url = "/account"
-    if ret and ret.startswith("/"):
-        target_url = ret
+    target_url = ret if is_safe_redirect_url(ret) else "/account"
 
     response = RedirectResponse(url=target_url, status_code=status.HTTP_302_FOUND)
     _set_auth_cookie(response, raw_token)
@@ -235,6 +250,8 @@ async def register_page(
     user: Optional[User] = Depends(get_optional_user),
 ):
     if user:
+        if is_safe_redirect_url(return_to):
+            return RedirectResponse(url=return_to, status_code=status.HTTP_302_FOUND)
         return RedirectResponse(url="/account", status_code=status.HTTP_302_FOUND)
     return _render_with_csrf(request, "register.html", {"return_to": return_to or ""})
 
@@ -287,9 +304,7 @@ async def register_submit(
     token = await create_email_verification_token(user.id)
     await send_verification_email(user.email, token)
 
-    target_url = "/account"
-    if return_to and return_to.startswith("/"):
-        target_url = return_to
+    target_url = return_to if is_safe_redirect_url(return_to) else "/account"
 
     response = RedirectResponse(url=target_url, status_code=status.HTTP_302_FOUND)
     _set_auth_cookie(response, raw_token)
@@ -312,8 +327,10 @@ async def consent_page(
     user: Optional[User] = Depends(get_optional_user),
 ):
     if not user:
+        original_query = str(request.url.query)
+        encoded_return = urllib.parse.quote(f"/consent?{original_query}")
         return RedirectResponse(
-            url=f"/login?return_to={urllib.parse.quote(str(request.url.query))}",
+            url=f"/login?return_to={encoded_return}",
             status_code=status.HTTP_302_FOUND,
         )
 
@@ -554,3 +571,16 @@ async def resend_verification_submit(
             "email": email,
         },
     )
+
+
+@router.get("/terms", response_class=HTMLResponse)
+async def terms_page(request: Request):
+    """Render the Terms of Service page."""
+    return _render_with_csrf(request, "terms.html", {})
+
+
+@router.get("/privacy", response_class=HTMLResponse)
+async def privacy_page(request: Request):
+    """Render the Privacy Policy page."""
+    return _render_with_csrf(request, "privacy.html", {})
+

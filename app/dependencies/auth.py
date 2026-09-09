@@ -53,7 +53,12 @@ async def require_session_user(
     return user
 
 
+import hashlib
+import hmac
+
+
 async def get_user_from_bearer_token(
+    request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Security(bearer_scheme),
 ) -> User:
     """Validate Bearer access token and return associated User for resource/userinfo endpoints."""
@@ -65,7 +70,7 @@ async def get_user_from_bearer_token(
         )
 
     try:
-        payload = decode_and_verify_token(credentials.credentials)
+        payload = decode_and_verify_token(credentials.credentials, expected_typ="at+jwt")
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -87,6 +92,7 @@ async def get_user_from_bearer_token(
             detail="User account does not exist or is disabled",
         )
 
+    request.state.token_claims = payload
     return user
 
 
@@ -108,22 +114,28 @@ async def require_admin_user(
     user: Optional[User] = Depends(get_optional_user),
     x_admin_api_key: Optional[str] = Header(None, alias="X-Admin-API-Key"),
 ) -> Optional[User]:
-    """Require an admin either via active session (is_admin or email in ADMIN_EMAILS) or Admin API Key."""
+    """Require an admin either via active session (is_admin or verified email in ADMIN_EMAILS), Admin API Key header, or secure admin session cookie."""
     settings = get_settings()
 
-    # Path 1: API key in header, query param, or admin session cookie
-    api_key = (
-        x_admin_api_key
-        or request.query_params.get("admin_key")
-        or request.cookies.get("veylor_admin_key")
-    )
-    if api_key and constant_time_compare(api_key, settings.ADMIN_API_KEY):
+    # Path 1: API key in header (never query param!)
+    if x_admin_api_key and constant_time_compare(x_admin_api_key, settings.ADMIN_API_KEY):
         return user
 
-    # Path 2: Authenticated user with admin status
-    if user:
+    # Path 1b: Secure HMAC Admin Web Session Cookie
+    admin_session_cookie = request.cookies.get("veylor_admin_session")
+    if admin_session_cookie:
+        expected_cookie = hmac.new(
+            settings.SECRET_KEY.encode(),
+            b"veylor_admin_session_token",
+            hashlib.sha256,
+        ).hexdigest()
+        if constant_time_compare(admin_session_cookie, expected_cookie):
+            return user
+
+    # Path 2: Authenticated user with admin status and verified email
+    if user and not user.disabled:
         admin_emails = [e.lower() for e in settings.ADMIN_EMAILS]
-        if user.is_admin or user.email.lower() in admin_emails:
+        if user.is_admin or (user.email_verified and user.email.lower() in admin_emails):
             return user
 
     raise HTTPException(

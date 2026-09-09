@@ -30,13 +30,13 @@ def run_migration(mongo_uri: str = "mongodb://velo-api-mongo:27017"):
     velo_users = list(velo_db["user"].find({}))
     print(f"Found {len(velo_users)} users in velo_db.user")
 
-    # Clear out existing test records in SSO as requested
-    del_res = sso_db["users"].delete_many({})
-    print(f"Cleared {del_res.deleted_count} existing test records in veylor_sso.users")
-
     migrated = 0
     for u in velo_users:
         email = u["email"].strip().lower()
+        # Skip if user already exists in SSO to make script non-destructive and safe to re-run
+        if sso_db["users"].find_one({"email": email}):
+            print(f"  [-] Skipping existing user: {email}")
+            continue
         first_name = (u.get("first_name") or "").strip()
         last_name = (u.get("last_name") or "").strip()
         name = f"{first_name} {last_name}".strip() or u.get("username") or email.split("@")[0]

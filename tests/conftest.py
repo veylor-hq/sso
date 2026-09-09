@@ -21,6 +21,9 @@ from app.security.jwt import get_key_manager
 @pytest.fixture(autouse=True)
 async def setup_test_db():
     """Spin up an in-memory MongoDB client via mongomock-motor for each test."""
+    from app.security.rate_limit import _in_memory_buckets
+    _in_memory_buckets.clear()
+
     mock_client = AsyncMongoMockClient()
     await init_db(client=mock_client, database_name="veylor_sso_test")
     # Load keys

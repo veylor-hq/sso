@@ -5,7 +5,11 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, EmailStr, Field
 from app.config import get_settings
 from app.dependencies.auth import get_optional_session, require_session_user
-from app.dependencies.rate_limit import rate_limit_login
+from app.dependencies.rate_limit import (
+    rate_limit_forgot_password,
+    rate_limit_login,
+    rate_limit_register,
+)
 from app.models.session import BrowserSession
 from app.models.user import User
 from app.security.rate_limit import get_client_ip
@@ -106,7 +110,7 @@ def _clear_session_cookie(response: Response) -> None:
     )
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(rate_limit_register)])
 async def register(
     payload: RegisterRequest,
     request: Request,
@@ -177,7 +181,7 @@ async def get_me(user: User = Depends(require_session_user)):
     return UserResponse.from_user(user)
 
 
-@router.post("/forgot-password")
+@router.post("/forgot-password", dependencies=[Depends(rate_limit_forgot_password)])
 async def forgot_password(payload: ForgotPasswordRequest):
     """Initiate password reset.
 
@@ -190,7 +194,7 @@ async def forgot_password(payload: ForgotPasswordRequest):
     return {"message": "If an account with that email exists, password reset instructions have been sent."}
 
 
-@router.post("/reset-password")
+@router.post("/reset-password", dependencies=[Depends(rate_limit_forgot_password)])
 async def reset_password(payload: ResetPasswordRequest):
     """Reset password using received token."""
     success, msg = await reset_password_with_token(payload.token, payload.new_password)
@@ -208,7 +212,7 @@ async def verify_email(payload: VerifyEmailRequest):
     return {"message": msg}
 
 
-@router.post("/resend-verification")
+@router.post("/resend-verification", dependencies=[Depends(rate_limit_forgot_password)])
 async def resend_verification(payload: ResendVerificationRequest):
     """Resend email verification link.
 
@@ -224,7 +228,7 @@ class GoogleLoginRequest(BaseModel):
     id_token: str
 
 
-@router.post("/google", response_model=UserResponse)
+@router.post("/google", response_model=UserResponse, dependencies=[Depends(rate_limit_login)])
 async def login_google(
     payload: GoogleLoginRequest,
     request: Request,
@@ -235,20 +239,26 @@ async def login_google(
     if not google_payload:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired Google ID Token",
+            detail="Invalid, expired, or unverified Google ID Token",
         )
 
     email = google_payload.get("email")
-    google_sub = google_payload.get("sub")
+    google_sub = str(google_payload.get("sub") or google_payload.get("user_id") or "")
     name = google_payload.get("name") or (email.split("@")[0] if email else "Veylor User")
     picture = google_payload.get("picture")
 
-    user = await get_or_create_google_user(
-        email=email,
-        google_sub=google_sub,
-        name=name,
-        avatar_url=picture,
-    )
+    try:
+        user = await get_or_create_google_user(
+            email=email,
+            google_sub=google_sub,
+            name=name,
+            avatar_url=picture,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    if user.disabled:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This account has been disabled.")
 
     ip = get_client_ip(request)
     ua = request.headers.get("User-Agent")

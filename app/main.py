@@ -56,10 +56,15 @@ app = FastAPI(
     redoc_url="/redoc" if settings.SSO_ENV != "production" else None,
 )
 
-# 1. CORS Configuration (Explicit origins only, never wildcard with credentials)
+# 1. CORS Configuration (Explicit origins only, strip localhost in production)
+cors_origins = [
+    origin for origin in settings.CORS_ORIGINS
+    if not (settings.SSO_ENV == "production" and ("://localhost" in origin or "://127.0.0.1" in origin))
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
@@ -104,6 +109,19 @@ async def security_and_logging_middleware(request: Request, call_next):
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["X-Request-ID"] = request_id
+
+    # Content Security Policy (allows self and Google Identity Services for login)
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://accounts.google.com; "
+        "style-src 'self' 'unsafe-inline'; "
+        "frame-src https://accounts.google.com; "
+        "connect-src 'self' https://accounts.google.com; "
+        "img-src 'self' data: https:;"
+    )
+
+    if settings.SSO_ENV == "production":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
 
     # Safe structured request logging (never log request bodies/tokens)
     if not request.url.path.startswith("/static"):

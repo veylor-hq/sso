@@ -140,27 +140,38 @@ async def exchange_authorization_code(
         raise OAuthError("invalid_request", "Missing authorization code.")
 
     code_h = hash_token(raw_code)
-    auth_code = await AuthorizationCode.find_one(AuthorizationCode.code_hash == code_h)
+    now = datetime.now(timezone.utc)
+    collection = AuthorizationCode.get_pymongo_collection()
+    
+    # Atomic compare-and-swap: only update if used_at is None and expires_at > now
+    doc = await collection.find_one_and_update(
+        {
+            "code_hash": code_h,
+            "used_at": None,
+            "expires_at": {"$gt": now},
+        },
+        {"$set": {"used_at": now}},
+    )
 
-    if not auth_code:
+    if not doc:
+        # Determine specific failure reason for logging/security audit
+        existing = await collection.find_one({"code_hash": code_h})
+        if existing:
+            if existing.get("used_at") is not None:
+                raise OAuthError(
+                    "invalid_grant",
+                    "Authorization code has already been used (replay detected).",
+                )
+            exp = existing.get("expires_at")
+            if exp:
+                exp_tz = exp.replace(tzinfo=timezone.utc) if exp.tzinfo is None else exp
+                if exp_tz <= now:
+                    raise OAuthError("invalid_grant", "Authorization code has expired.")
         raise OAuthError("invalid_grant", "Authorization code not found or invalid.")
 
-    # Replay detection: if code was already used, reject immediately
-    if auth_code.used_at is not None:
-        raise OAuthError(
-            "invalid_grant",
-            "Authorization code has already been used (replay detected).",
-        )
-
-    # Check expiration
-    now = datetime.now(timezone.utc)
-    exp = auth_code.expires_at.replace(tzinfo=timezone.utc) if auth_code.expires_at.tzinfo is None else auth_code.expires_at
-    if exp <= now:
-        raise OAuthError("invalid_grant", "Authorization code has expired.")
-
-    # Invalidate code immediately to prevent concurrent replay
+    clean_doc = {k: v for k, v in doc.items() if k != "_id"}
+    auth_code = AuthorizationCode(**clean_doc)
     auth_code.used_at = now
-    await auth_code.save()
 
     # Verify client match
     if auth_code.client_id != client_id:

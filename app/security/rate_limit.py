@@ -66,9 +66,14 @@ async def check_rate_limit(
 
 
 def get_client_ip(request: Request) -> str:
-    """Extract client IP handling forward headers carefully."""
+    """Extract client IP reliably to prevent rate limiting bypass via spoofed X-Forwarded-For.
+    
+    Standard reverse proxies (Kamal/Traefik/Cloudflare/Nginx) append the client connection IP
+    to the end of X-Forwarded-For. Taking the rightmost IP prevents client-injected spoofing.
+    """
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
-        # Take the first untrusted IP in the list
-        return forwarded.split(",")[0].strip()
+        ips = [ip.strip() for ip in forwarded.split(",") if ip.strip()]
+        if ips:
+            return ips[-1]
     return request.client.host if request.client else "127.0.0.1"
