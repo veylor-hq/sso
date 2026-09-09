@@ -1,172 +1,374 @@
-{% extends "base.html" %}
+{% extends "base.html" %} {% block title %}Privacy Policy - Veylor Identity{%
+endblock %} {% block content %}
+<div
+  class="w-full max-w-3xl bg-[#161616] border border-[#333333] p-8 sm:p-10 my-8"
+>
+  <!-- Header Badge -->
+  <div class="mb-8 border-b border-[#262626] pb-6">
+    <div
+      class="inline-flex items-center gap-2 border border-[#333333] bg-[#1a1a1a] px-2.5 py-1 text-[11px] font-mono text-[#a1a1aa] uppercase tracking-widest mb-3"
+    >
+      <span class="h-1.5 w-1.5 bg-[#fafafa]"></span>
+      Data Protection &bull; UK GDPR
+    </div>
+    <h1 class="text-2xl font-bold tracking-tight text-[#fafafa] uppercase">
+      Privacy Policy
+    </h1>
+    <p class="text-xs text-[#a1a1aa] mt-1 font-mono">
+      Last updated: September 2026 &bull; Compliant with UK GDPR & DPA 2018
+    </p>
+  </div>
 
-{% block title %}Privacy Policy - Veylor Identity{% endblock %}
+  <!-- Privacy Body -->
+  <div class="space-y-8 text-xs leading-relaxed text-[#d4d4d8] font-sans">
+    <section>
+      <h2
+        class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2"
+      >
+        1. Overview & Data Controller Identification
+      </h2>
+      <p class="mb-2">
+        <strong class="text-[#fafafa]">Veylor Systems</strong> ("Veylor", "we",
+        "us", or "our") is dedicated to uncompromising privacy, minimal data
+        footprint, and defense-grade data security. This Privacy Policy governs
+        the processing of personal data collected through the
+        <strong class="text-[#fafafa]">Veylor Single Sign-On (SSO)</strong>
+        identity service at
+        <code
+          class="font-mono text-[#fafafa] bg-[#111111] px-1 py-0.5 border border-[#333333]"
+          >https://sso.veylor.dev</code
+        >
+        (the "Service").
+      </p>
+      <p>
+        Under the UK General Data Protection Regulation (UK GDPR) and the Data
+        Protection Act 2018, Veylor Systems acts as the
+        <strong class="text-[#fafafa]">Data Controller</strong> with respect to
+        your universal Veylor user profile, authentication credentials, security
+        logs, and authorization grants.
+      </p>
+    </section>
 
-{% block content %}
-<div class="w-full max-w-3xl bg-[#161616] border border-[#333333] p-8 sm:p-10 my-8">
-    <!-- Header Badge -->
-    <div class="mb-8 border-b border-[#262626] pb-6">
-        <div class="inline-flex items-center gap-2 border border-[#333333] bg-[#1a1a1a] px-2.5 py-1 text-[11px] font-mono text-[#a1a1aa] uppercase tracking-widest mb-3">
-            <span class="h-1.5 w-1.5 bg-[#fafafa]"></span>
-            Data Protection &bull; UK GDPR
+    <section>
+      <h2
+        class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2"
+      >
+        2. Information We Collect & How It Is Collected
+      </h2>
+      <p class="mb-2">
+        We adhere strictly to the data minimization principle. We collect only
+        the data necessary to securely authenticate your identity and issue
+        OpenID Connect claims to authorized relying parties:
+      </p>
+      <div class="space-y-3 mt-3">
+        <div class="p-3 bg-[#111111] border border-[#262626]">
+          <h3
+            class="text-xs font-mono font-semibold uppercase text-[#fafafa] mb-1"
+          >
+            A. Identity & Profile Records
+          </h3>
+          <ul class="list-disc pl-5 space-y-1 text-[#a1a1aa]">
+            <li>
+              <strong class="text-[#d4d4d8]">Full Name & Email Address:</strong>
+              Provided during account registration or imported via Google OAuth.
+            </li>
+            <li>
+              <strong class="text-[#d4d4d8]"
+                >Cryptographic Password Hash:</strong
+              >
+              One-way salted hash calculated via the memory-hard
+              <code class="font-mono text-[#fafafa]">Argon2id</code> algorithm.
+              We never store or transmit plaintext passwords.
+            </li>
+            <li>
+              <strong class="text-[#d4d4d8]">Federated Identifier:</strong>
+              Google Subject ID (<code class="font-mono text-[#fafafa]"
+                >google_sub</code
+              >) when Google authentication is utilized.
+            </li>
+            <li>
+              <strong class="text-[#d4d4d8]"
+                >Account Verification Status:</strong
+              >
+              Verification timestamps and cryptographically hashed verification
+              tokens.
+            </li>
+          </ul>
         </div>
-        <h1 class="text-2xl font-bold tracking-tight text-[#fafafa] uppercase">Privacy Policy</h1>
-        <p class="text-xs text-[#a1a1aa] mt-1 font-mono">Last updated: September 2026 &bull; Compliant with UK GDPR & DPA 2018</p>
-    </div>
 
-    <!-- Privacy Body -->
-    <div class="space-y-8 text-xs leading-relaxed text-[#d4d4d8] font-sans">
-        <section>
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2">
-                1. Overview & Data Controller Identification
-            </h2>
-            <p class="mb-2">
-                <strong class="text-[#fafafa]">Veylor Systems</strong> ("Veylor", "we", "us", or "our") is dedicated to uncompromising privacy, minimal data footprint, and defense-grade data security. This Privacy Policy governs the processing of personal data collected through the <strong class="text-[#fafafa]">Veylor Single Sign-On (SSO)</strong> identity service at <code class="font-mono text-[#fafafa] bg-[#111111] px-1 py-0.5 border border-[#333333]">https://sso.veylor.dev</code> (the "Service").
-            </p>
-            <p>
-                Under the UK General Data Protection Regulation (UK GDPR) and the Data Protection Act 2018, Veylor Systems acts as the <strong class="text-[#fafafa]">Data Controller</strong> with respect to your universal Veylor user profile, authentication credentials, security logs, and authorization grants.
-            </p>
-        </section>
+        <div class="p-3 bg-[#111111] border border-[#262626]">
+          <h3
+            class="text-xs font-mono font-semibold uppercase text-[#fafafa] mb-1"
+          >
+            B. Authentication & Security Telemetry
+          </h3>
+          <ul class="list-disc pl-5 space-y-1 text-[#a1a1aa]">
+            <li>
+              <strong class="text-[#d4d4d8]">Session & Device Metadata:</strong>
+              Active session identifiers, client IP address (extracted from
+              verified proxy headers), user agent strings, and session
+              expiration timestamps.
+            </li>
+            <li>
+              <strong class="text-[#d4d4d8]">Audit Logs:</strong> Failed login
+              attempts, password reset events, OAuth client authorization
+              grants, and token issuance timestamps to detect and neutralize
+              adversarial attacks.
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
 
-        <section>
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2">
-                2. Information We Collect & How It Is Collected
-            </h2>
-            <p class="mb-2">
-                We adhere strictly to the data minimization principle. We collect only the data necessary to securely authenticate your identity and issue OpenID Connect claims to authorized relying parties:
-            </p>
-            <div class="space-y-3 mt-3">
-                <div class="p-3 bg-[#111111] border border-[#262626]">
-                    <h3 class="text-xs font-mono font-semibold uppercase text-[#fafafa] mb-1">A. Identity & Profile Records</h3>
-                    <ul class="list-disc pl-5 space-y-1 text-[#a1a1aa]">
-                        <li><strong class="text-[#d4d4d8]">Full Name & Email Address:</strong> Provided during account registration or imported via Google OAuth.</li>
-                        <li><strong class="text-[#d4d4d8]">Cryptographic Password Hash:</strong> One-way salted hash calculated via the memory-hard <code class="font-mono text-[#fafafa]">Argon2id</code> algorithm. We never store or transmit plaintext passwords.</li>
-                        <li><strong class="text-[#d4d4d8]">Federated Identifier:</strong> Google Subject ID (<code class="font-mono text-[#fafafa]">google_sub</code>) when Google authentication is utilized.</li>
-                        <li><strong class="text-[#d4d4d8]">Account Verification Status:</strong> Verification timestamps and cryptographically hashed verification tokens.</li>
-                    </ul>
-                </div>
+    <section>
+      <h2
+        class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2"
+      >
+        3. Lawful Basis for Processing
+      </h2>
+      <p class="mb-2">
+        Under UK GDPR Article 6, we process your personal data under the
+        following lawful bases:
+      </p>
+      <ul class="list-disc pl-5 space-y-1.5 text-[#a1a1aa]">
+        <li>
+          <strong class="text-[#fafafa]"
+            >Contractual Performance (Art. 6(1)(b)):</strong
+          >
+          To provision your universal account, verify credentials, authenticate
+          login sessions, and issue secure tokens allowing you to access relying
+          parties (such as eGarage).
+        </li>
+        <li>
+          <strong class="text-[#fafafa]"
+            >Legitimate Interests (Art. 6(1)(f)):</strong
+          >
+          To enforce rate limits, prevent credential stuffing, mitigate
+          brute-force attacks, protect cryptographic keys, and ensure the
+          resilience of our identity infrastructure.
+        </li>
+        <li>
+          <strong class="text-[#fafafa]"
+            >Legal Obligation (Art. 6(1)(c)):</strong
+          >
+          To comply with applicable statutory obligations, fraud investigations,
+          and regulatory disclosures.
+        </li>
+      </ul>
+    </section>
 
-                <div class="p-3 bg-[#111111] border border-[#262626]">
-                    <h3 class="text-xs font-mono font-semibold uppercase text-[#fafafa] mb-1">B. Authentication & Security Telemetry</h3>
-                    <ul class="list-disc pl-5 space-y-1 text-[#a1a1aa]">
-                        <li><strong class="text-[#d4d4d8]">Session & Device Metadata:</strong> Active session identifiers, client IP address (extracted from verified proxy headers), user agent strings, and session expiration timestamps.</li>
-                        <li><strong class="text-[#d4d4d8]">Audit Logs:</strong> Failed login attempts, password reset events, OAuth client authorization grants, and token issuance timestamps to detect and neutralize adversarial attacks.</li>
-                    </ul>
-                </div>
-            </div>
-        </section>
+    <section>
+      <h2
+        class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2"
+      >
+        4. Relying Party Data Transmission (OpenID Connect)
+      </h2>
+      <p class="mb-2">
+        When you use Veylor SSO to sign into an integrated relying party (such
+        as <strong class="text-[#fafafa]">eGarage</strong> at
+        <code class="font-mono text-[#fafafa]">https://egarageapp.uk</code>),
+        Veylor releases an OpenID Connect ID Token and UserInfo response
+        containing strictly consented claims:
+      </p>
+      <ul class="list-disc pl-5 space-y-1 text-[#a1a1aa]">
+        <li>
+          <code class="font-mono text-[#fafafa]">sub</code>: An opaque, unique
+          subject identifier assigned to your account.
+        </li>
+        <li>
+          <code class="font-mono text-[#fafafa]">email</code> &
+          <code class="font-mono text-[#fafafa]">email_verified</code>: Your
+          verified email address.
+        </li>
+        <li>
+          <code class="font-mono text-[#fafafa]">name</code>: Your registered
+          user name.
+        </li>
+      </ul>
+      <p class="mt-2 text-[#a1a1aa]">
+        Your password, session keys, and internal security logs are
+        <strong class="text-[#fafafa]">never</strong> disclosed to relying
+        parties. Each relying party processes your identity claims according to
+        its own privacy policy.
+      </p>
+    </section>
 
-        <section>
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2">
-                3. Lawful Basis for Processing
-            </h2>
-            <p class="mb-2">
-                Under UK GDPR Article 6, we process your personal data under the following lawful bases:
-            </p>
-            <ul class="list-disc pl-5 space-y-1.5 text-[#a1a1aa]">
-                <li><strong class="text-[#fafafa]">Contractual Performance (Art. 6(1)(b)):</strong> To provision your universal account, verify credentials, authenticate login sessions, and issue secure tokens allowing you to access relying parties (such as eGarage).</li>
-                <li><strong class="text-[#fafafa]">Legitimate Interests (Art. 6(1)(f)):</strong> To enforce rate limits, prevent credential stuffing, mitigate brute-force attacks, protect cryptographic keys, and ensure the resilience of our identity infrastructure.</li>
-                <li><strong class="text-[#fafafa]">Legal Obligation (Art. 6(1)(c)):</strong> To comply with applicable statutory obligations, fraud investigations, and regulatory disclosures.</li>
-            </ul>
-        </section>
+    <section>
+      <h2
+        class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2"
+      >
+        5. Cookie Policy & Zero Tracking Guarantee
+      </h2>
+      <p class="mb-2">
+        Veylor SSO operates with a strict zero-tracking architecture:
+      </p>
+      <ul class="list-disc pl-5 space-y-1.5 text-[#a1a1aa]">
+        <li>
+          <strong class="text-[#fafafa]"
+            >Strictly Necessary Technical Cookies:</strong
+          >
+          We only store essential first-party cookies (<code
+            class="font-mono text-[#fafafa]"
+            >veylor_session</code
+          >, <code class="font-mono text-[#fafafa]">veylor_csrf</code>,
+          <code class="font-mono text-[#fafafa]">veylor_admin_session</code>)
+          configured with
+          <code class="font-mono text-[#fafafa]">HttpOnly</code>,
+          <code class="font-mono text-[#fafafa]">SameSite=Lax</code>, and
+          <code class="font-mono text-[#fafafa]">Secure</code> flags. Under PECR
+          and UK GDPR, strictly necessary security cookies do not require user
+          consent banners.
+        </li>
+        <li>
+          <strong class="text-[#fafafa]">Zero Third-Party Trackers:</strong> We
+          do not deploy third-party advertising cookies, retargeting pixels,
+          social media widgets, or behavioural profiling scripts.
+        </li>
+      </ul>
+    </section>
 
-        <section>
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2">
-                4. Relying Party Data Transmission (OpenID Connect)
-            </h2>
-            <p class="mb-2">
-                When you use Veylor SSO to sign into an integrated relying party (such as <strong class="text-[#fafafa]">eGarage</strong> at <code class="font-mono text-[#fafafa]">https://egarageapp.uk</code>), Veylor releases an OpenID Connect ID Token and UserInfo response containing strictly consented claims:
-            </p>
-            <ul class="list-disc pl-5 space-y-1 text-[#a1a1aa]">
-                <li><code class="font-mono text-[#fafafa]">sub</code>: An opaque, unique subject identifier assigned to your account.</li>
-                <li><code class="font-mono text-[#fafafa]">email</code> & <code class="font-mono text-[#fafafa]">email_verified</code>: Your verified email address.</li>
-                <li><code class="font-mono text-[#fafafa]">name</code>: Your registered user name.</li>
-            </ul>
-            <p class="mt-2 text-[#a1a1aa]">
-                Your password, session keys, and internal security logs are <strong class="text-[#fafafa]">never</strong> disclosed to relying parties. Each relying party processes your identity claims according to its own privacy policy.
-            </p>
-        </section>
+    <section>
+      <h2
+        class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2"
+      >
+        6. Data Retention & Cryptographic Protections
+      </h2>
+      <p class="mb-2">
+        All data is encrypted in transit using modern TLS 1.3 encryption and
+        stored within secured, firewall-isolated environments.
+      </p>
+      <ul class="list-disc pl-5 space-y-1.5 text-[#a1a1aa]">
+        <li>
+          <strong class="text-[#fafafa]">Tokens & Codes:</strong> Authorization
+          codes expire after 10 minutes and are permanently purged upon
+          exchange. Access tokens expire within 1 hour.
+        </li>
+        <li>
+          <strong class="text-[#fafafa]">Browser Sessions:</strong> Active web
+          sessions persist for 30 days unless revoked manually by the user or
+          terminated upon password change.
+        </li>
+        <li>
+          <strong class="text-[#fafafa]">Account Erasure:</strong> Upon account
+          deletion, user records and associated credentials are permanently
+          purged from active production databases within 30 days.
+        </li>
+      </ul>
+    </section>
 
-        <section>
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2">
-                5. Cookie Policy & Zero Tracking Guarantee
-            </h2>
-            <p class="mb-2">
-                Veylor SSO operates with a strict zero-tracking architecture:
-            </p>
-            <ul class="list-disc pl-5 space-y-1.5 text-[#a1a1aa]">
-                <li><strong class="text-[#fafafa]">Strictly Necessary Technical Cookies:</strong> We only store essential first-party cookies (<code class="font-mono text-[#fafafa]">veylor_session</code>, <code class="font-mono text-[#fafafa]">veylor_csrf</code>, <code class="font-mono text-[#fafafa]">veylor_admin_session</code>) configured with <code class="font-mono text-[#fafafa]">HttpOnly</code>, <code class="font-mono text-[#fafafa]">SameSite=Lax</code>, and <code class="font-mono text-[#fafafa]">Secure</code> flags. Under PECR and UK GDPR, strictly necessary security cookies do not require user consent banners.</li>
-                <li><strong class="text-[#fafafa]">Zero Third-Party Trackers:</strong> We do not deploy third-party advertising cookies, retargeting pixels, social media widgets, or behavioural profiling scripts.</li>
-            </ul>
-        </section>
+    <section>
+      <h2
+        class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2"
+      >
+        7. Third-Party Sub-Processors
+      </h2>
+      <p class="mb-2">
+        We partner with vetted infrastructure providers bound by strict Data
+        Processing Addendums (DPAs):
+      </p>
+      <ul class="list-disc pl-5 space-y-1 text-[#a1a1aa]">
+        <li>
+          <strong class="text-[#fafafa]">Infrastructure Hosting:</strong>
+          Dedicated EU/UK cloud servers.
+        </li>
+        <li>
+          <strong class="text-[#fafafa]">Transactional Email:</strong> Brevo /
+          SMTP relay services for delivery of verification and password reset
+          notifications.
+        </li>
+        <li>
+          <strong class="text-[#fafafa]">Google Identity:</strong> Google OAuth
+          APIs (only invoked when you choose "Sign in with Google").
+        </li>
+      </ul>
+    </section>
 
-        <section>
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2">
-                6. Data Retention & Cryptographic Protections
-            </h2>
-            <p class="mb-2">
-                All data is encrypted in transit using modern TLS 1.3 encryption and stored within secured, firewall-isolated environments.
-            </p>
-            <ul class="list-disc pl-5 space-y-1.5 text-[#a1a1aa]">
-                <li><strong class="text-[#fafafa]">Tokens & Codes:</strong> Authorization codes expire after 10 minutes and are permanently purged upon exchange. Access tokens expire within 1 hour.</li>
-                <li><strong class="text-[#fafafa]">Browser Sessions:</strong> Active web sessions persist for 30 days unless revoked manually by the user or terminated upon password change.</li>
-                <li><strong class="text-[#fafafa]">Account Erasure:</strong> Upon account deletion, user records and associated credentials are permanently purged from active production databases within 30 days.</li>
-            </ul>
-        </section>
+    <section>
+      <h2
+        class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2"
+      >
+        8. Your Data Subject Rights (UK GDPR)
+      </h2>
+      <p class="mb-2">
+        Under UK data protection law, you possess explicit rights regarding your
+        personal information:
+      </p>
+      <ul class="list-disc pl-5 space-y-1 text-[#a1a1aa]">
+        <li>
+          <strong class="text-[#fafafa]">Right of Access:</strong> Request a
+          copy of all personal identity records and active authorizations held
+          by Veylor SSO.
+        </li>
+        <li>
+          <strong class="text-[#fafafa]">Right to Rectification:</strong>
+          Request correction of inaccurate personal information.
+        </li>
+        <li>
+          <strong class="text-[#fafafa]"
+            >Right to Erasure ("Right to be Forgotten"):</strong
+          >
+          Request complete deletion of your universal identity profile.
+        </li>
+        <li>
+          <strong class="text-[#fafafa]">Right to Restrict or Object:</strong>
+          Restrict processing under specific statutory circumstances.
+        </li>
+        <li>
+          <strong class="text-[#fafafa]">Right to Data Portability:</strong>
+          Receive your profile data in a structured, machine-readable JSON
+          format.
+        </li>
+      </ul>
+      <p class="mt-3 text-[#a1a1aa]">
+        To exercise any of these rights, contact us at
+        <a
+          href="mailto:contact@veylor.dev"
+          class="text-[#fafafa] underline hover:text-[#e5e5e5]"
+          >contact@veylor.dev</a
+        >. You also retain the statutory right to lodge a complaint with the UK
+        Information Commissioner's Office (ICO) at
+        <a
+          href="https://ico.org.uk"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-[#fafafa] underline hover:text-[#e5e5e5]"
+          >ico.org.uk</a
+        >.
+      </p>
+    </section>
 
-        <section>
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2">
-                7. Third-Party Sub-Processors
-            </h2>
-            <p class="mb-2">
-                We partner with vetted infrastructure providers bound by strict Data Processing Addendums (DPAs):
-            </p>
-            <ul class="list-disc pl-5 space-y-1 text-[#a1a1aa]">
-                <li><strong class="text-[#fafafa]">Infrastructure Hosting:</strong> Dedicated EU/UK cloud servers.</li>
-                <li><strong class="text-[#fafafa]">Transactional Email:</strong> Brevo / SMTP relay services for delivery of verification and password reset notifications.</li>
-                <li><strong class="text-[#fafafa]">Google Identity:</strong> Google OAuth APIs (only invoked when you choose "Sign in with Google").</li>
-            </ul>
-        </section>
+    <section>
+      <h2
+        class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2"
+      >
+        9. Contact & Inquiries
+      </h2>
+      <p>
+        Data Protection Officer / Security Team<br />
+        Veylor Systems<br />
+        Email:
+        <a
+          href="mailto:contact@veylor.dev"
+          class="text-[#fafafa] underline hover:text-[#e5e5e5]"
+          >contact@veylor.dev</a
+        >
+      </p>
+    </section>
+  </div>
 
-        <section>
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2">
-                8. Your Data Subject Rights (UK GDPR)
-            </h2>
-            <p class="mb-2">
-                Under UK data protection law, you possess explicit rights regarding your personal information:
-            </p>
-            <ul class="list-disc pl-5 space-y-1 text-[#a1a1aa]">
-                <li><strong class="text-[#fafafa]">Right of Access:</strong> Request a copy of all personal identity records and active authorizations held by Veylor SSO.</li>
-                <li><strong class="text-[#fafafa]">Right to Rectification:</strong> Request correction of inaccurate personal information.</li>
-                <li><strong class="text-[#fafafa]">Right to Erasure ("Right to be Forgotten"):</strong> Request complete deletion of your universal identity profile.</li>
-                <li><strong class="text-[#fafafa]">Right to Restrict or Object:</strong> Restrict processing under specific statutory circumstances.</li>
-                <li><strong class="text-[#fafafa]">Right to Data Portability:</strong> Receive your profile data in a structured, machine-readable JSON format.</li>
-            </ul>
-            <p class="mt-3 text-[#a1a1aa]">
-                To exercise any of these rights, contact us at <a href="mailto:privacy@veylor.dev" class="text-[#fafafa] underline hover:text-[#e5e5e5]">privacy@veylor.dev</a>. You also retain the statutory right to lodge a complaint with the UK Information Commissioner's Office (ICO) at <a href="https://ico.org.uk" target="_blank" rel="noopener noreferrer" class="text-[#fafafa] underline hover:text-[#e5e5e5]">ico.org.uk</a>.
-            </p>
-        </section>
-
-        <section>
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-[#fafafa] font-mono mb-2">
-                9. Contact & Inquiries
-            </h2>
-            <p>
-                Data Protection Officer / Security Team<br>
-                Veylor Systems<br>
-                Email: <a href="mailto:privacy@veylor.dev" class="text-[#fafafa] underline hover:text-[#e5e5e5]">privacy@veylor.dev</a>
-            </p>
-        </section>
-    </div>
-
-    <!-- Return Link -->
-    <div class="mt-8 pt-6 border-t border-[#262626] flex items-center justify-between text-[11px] font-mono text-[#71717a] uppercase">
-        <a href="/" class="text-[#fafafa] hover:underline font-medium">
-            &larr; Return to Central Auth
-        </a>
-        <a href="/terms" class="text-[#a1a1aa] hover:text-[#fafafa] hover:underline">
-            Terms of Service &rarr;
-        </a>
-    </div>
+  <!-- Return Link -->
+  <div
+    class="mt-8 pt-6 border-t border-[#262626] flex items-center justify-between text-[11px] font-mono text-[#71717a] uppercase"
+  >
+    <a href="/" class="text-[#fafafa] hover:underline font-medium">
+      &larr; Return to Central Auth
+    </a>
+    <a
+      href="/terms"
+      class="text-[#a1a1aa] hover:text-[#fafafa] hover:underline"
+    >
+      Terms of Service &rarr;
+    </a>
+  </div>
 </div>
 {% endblock %}
