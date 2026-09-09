@@ -1,0 +1,327 @@
+{% extends "admin/layout.html" %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    <!-- Top Action Bar -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#333333] pb-4">
+        <div>
+            <h2 class="text-sm font-bold font-mono text-[#fafafa] uppercase tracking-wider">Trusted Websites & OAuth Clients</h2>
+            <p class="text-xs font-mono text-[#71717a] mt-0.5">Manage registered first-party and third-party client applications</p>
+        </div>
+        <button onclick="openCreateModal()" class="btn-veylor-primary px-4 py-2 text-xs tracking-wider">
+            + Register Application
+        </button>
+    </div>
+
+    <!-- Feedback Banner -->
+    <div id="alertBox" class="hidden p-3 text-xs font-mono"></div>
+
+    <!-- Clients Table -->
+    <div class="bg-[#161616] border border-[#333333]">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left font-mono text-xs">
+                <thead>
+                    <tr class="border-b border-[#2a2a2a] text-[#71717a] text-[10px] uppercase tracking-wider bg-[#111111]">
+                        <th class="py-3 px-4">Client ID</th>
+                        <th class="py-3 px-4">Name</th>
+                        <th class="py-3 px-4">Type</th>
+                        <th class="py-3 px-4">Trust Level</th>
+                        <th class="py-3 px-4">Redirect URIs</th>
+                        <th class="py-3 px-4">Status</th>
+                        <th class="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-[#222222]">
+                    {% for c in clients %}
+                    <tr class="hover:bg-[#141414] transition">
+                        <td class="py-3 px-4 font-semibold text-[#fafafa]">{{ c.client_id }}</td>
+                        <td class="py-3 px-4 text-[#fafafa]">{{ c.client_name }}</td>
+                        <td class="py-3 px-4">
+                            {% if c.client_type == 'confidential' %}
+                            <span class="border border-purple-500/40 text-purple-400 bg-[#111111] px-2 py-0.5 text-[10px] uppercase">Confidential</span>
+                            {% else %}
+                            <span class="border border-[#444444] text-[#a1a1aa] bg-[#111111] px-2 py-0.5 text-[10px] uppercase">Public (PKCE)</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-4">
+                            {% if c.trusted %}
+                            <span class="border border-emerald-500/40 text-emerald-400 bg-[#111111] px-2 py-0.5 text-[10px] uppercase">Trusted (First-Party)</span>
+                            {% else %}
+                            <span class="border border-zinc-600 text-zinc-400 bg-[#111111] px-2 py-0.5 text-[10px] uppercase">Standard</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-4">
+                            <div class="max-w-xs space-y-0.5">
+                                {% for uri in c.redirect_uris %}
+                                <div class="text-[11px] text-[#a1a1aa] truncate" title="{{ uri }}">{{ uri }}</div>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td class="py-3 px-4">
+                            {% if c.disabled %}
+                            <span class="border border-red-500/40 text-red-400 bg-[#111111] px-2 py-0.5 text-[10px] uppercase">Disabled</span>
+                            {% else %}
+                            <span class="border border-emerald-500/40 text-emerald-400 bg-[#111111] px-2 py-0.5 text-[10px] uppercase">Active</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-4 text-right space-x-2">
+                            <button onclick='openEditModal({{ c|tojson }})'
+                                    class="text-[11px] text-[#fafafa] hover:underline bg-[#222222] px-2 py-1 border border-[#444444]">
+                                Edit
+                            </button>
+                            <button onclick="regenerateSecret('{{ c.client_id }}')"
+                                    class="text-[11px] text-amber-400 hover:underline bg-[#222222] px-2 py-1 border border-[#444444]">
+                                Secret
+                            </button>
+                            <button onclick="deleteClient('{{ c.client_id }}')"
+                                    class="text-[11px] text-red-400 hover:underline bg-[#222222] px-2 py-1 border border-[#444444]">
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="py-8 text-center text-[#71717a]">No OAuth clients configured.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Create Application -->
+<div id="createModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+    <div class="bg-[#161616] border border-[#333333] w-full max-w-lg p-6 space-y-4 font-mono">
+        <div class="flex items-center justify-between border-b border-[#2a2a2a] pb-3">
+            <h3 class="text-sm font-bold text-[#fafafa] uppercase tracking-wider">Register Application</h3>
+            <button onclick="closeModals()" class="text-[#a1a1aa] hover:text-white">&times;</button>
+        </div>
+
+        <form id="createForm" onsubmit="submitCreateClient(event)" class="space-y-4 text-xs">
+            <div>
+                <label class="block text-[#a1a1aa] uppercase mb-1">Client ID (Unique identifier, e.g. veylor-relay)</label>
+                <input type="text" id="newClientId" required class="w-full px-3 py-2 bg-[#111111] border border-[#333333] text-[#fafafa]">
+            </div>
+            <div>
+                <label class="block text-[#a1a1aa] uppercase mb-1">Application Name</label>
+                <input type="text" id="newClientName" required class="w-full px-3 py-2 bg-[#111111] border border-[#333333] text-[#fafafa]">
+            </div>
+            <div>
+                <label class="block text-[#a1a1aa] uppercase mb-1">Client Type</label>
+                <select id="newClientType" class="w-full px-3 py-2 bg-[#111111] border border-[#333333] text-[#fafafa]">
+                    <option value="public">Public (SPA / Mobile with PKCE)</option>
+                    <option value="confidential">Confidential (Backend with Client Secret)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[#a1a1aa] uppercase mb-1">Redirect URIs (One per line)</label>
+                <textarea id="newRedirectUris" required rows="3" class="w-full px-3 py-2 bg-[#111111] border border-[#333333] text-[#fafafa]"
+                          placeholder="https://app.veylor.dev/auth/callback&#10;http://localhost:3000/auth/callback"></textarea>
+            </div>
+            <div class="flex items-center gap-4">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="newTrusted" class="accent-white">
+                    <span class="text-[#a1a1aa]">Trusted First-Party (Skip Consent)</span>
+                </label>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-3 border-t border-[#2a2a2a]">
+                <button type="button" onclick="closeModals()" class="btn-veylor-secondary px-4 py-2 text-xs">Cancel</button>
+                <button type="submit" class="btn-veylor-primary px-4 py-2 text-xs">Register</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Edit Application -->
+<div id="editModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+    <div class="bg-[#161616] border border-[#333333] w-full max-w-lg p-6 space-y-4 font-mono">
+        <div class="flex items-center justify-between border-b border-[#2a2a2a] pb-3">
+            <h3 class="text-sm font-bold text-[#fafafa] uppercase tracking-wider">Edit Application: <span id="editClientIdTitle" class="text-amber-400"></span></h3>
+            <button onclick="closeModals()" class="text-[#a1a1aa] hover:text-white">&times;</button>
+        </div>
+
+        <form id="editForm" onsubmit="submitEditClient(event)" class="space-y-4 text-xs">
+            <input type="hidden" id="editClientId">
+            <div>
+                <label class="block text-[#a1a1aa] uppercase mb-1">Application Name</label>
+                <input type="text" id="editClientName" required class="w-full px-3 py-2 bg-[#111111] border border-[#333333] text-[#fafafa]">
+            </div>
+            <div>
+                <label class="block text-[#a1a1aa] uppercase mb-1">Client Type</label>
+                <select id="editClientType" class="w-full px-3 py-2 bg-[#111111] border border-[#333333] text-[#fafafa]">
+                    <option value="public">Public (SPA / Mobile with PKCE)</option>
+                    <option value="confidential">Confidential (Backend with Client Secret)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[#a1a1aa] uppercase mb-1">Redirect URIs (One per line)</label>
+                <textarea id="editRedirectUris" required rows="4" class="w-full px-3 py-2 bg-[#111111] border border-[#333333] text-[#fafafa]"></textarea>
+            </div>
+            <div class="flex items-center gap-6">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="editTrusted" class="accent-white">
+                    <span class="text-[#a1a1aa]">Trusted First-Party</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="editDisabled" class="accent-red-500">
+                    <span class="text-red-400">Disabled / Revoked</span>
+                </label>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-3 border-t border-[#2a2a2a]">
+                <button type="button" onclick="closeModals()" class="btn-veylor-secondary px-4 py-2 text-xs">Cancel</button>
+                <button type="submit" class="btn-veylor-primary px-4 py-2 text-xs">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Secret Display -->
+<div id="secretModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+    <div class="bg-[#161616] border border-[#333333] w-full max-w-md p-6 space-y-4 font-mono">
+        <div class="border-b border-[#2a2a2a] pb-3">
+            <h3 class="text-sm font-bold text-amber-400 uppercase tracking-wider">Client Secret Generated</h3>
+            <p class="text-[11px] text-[#a1a1aa] mt-0.5">Copy this secret now. It is cryptographically hashed and cannot be retrieved again.</p>
+        </div>
+
+        <div>
+            <label class="block text-[#71717a] uppercase text-[10px] mb-1">Client Secret</label>
+            <div class="flex gap-2">
+                <input type="text" id="secretDisplay" readonly class="w-full px-3 py-2 bg-[#111111] border border-[#444444] text-emerald-400 font-bold">
+                <button onclick="copySecret()" class="btn-veylor-secondary px-3 text-xs">Copy</button>
+            </div>
+        </div>
+
+        <div class="flex justify-end pt-3 border-t border-[#2a2a2a]">
+            <button onclick="closeModals(); location.reload();" class="btn-veylor-primary px-4 py-2 text-xs">I Have Stored It</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function showAlert(msg, isErr=false) {
+    const box = document.getElementById('alertBox');
+    box.className = isErr ? 'p-3 text-xs font-mono bg-[#1e1313] border border-[#7f1d1d] text-[#fca5a5]' : 'p-3 text-xs font-mono bg-[#111c14] border border-[#1e5a2e] text-[#86efac]';
+    box.innerText = msg;
+    box.classList.remove('hidden');
+}
+
+function closeModals() {
+    document.getElementById('createModal').classList.add('hidden');
+    document.getElementById('editModal').classList.add('hidden');
+    document.getElementById('secretModal').classList.add('hidden');
+}
+
+function openCreateModal() {
+    document.getElementById('createModal').classList.remove('hidden');
+}
+
+function openEditModal(client) {
+    document.getElementById('editClientId').value = client.client_id;
+    document.getElementById('editClientIdTitle').innerText = client.client_id;
+    document.getElementById('editClientName').value = client.client_name;
+    document.getElementById('editClientType').value = client.client_type;
+    document.getElementById('editRedirectUris').value = (client.redirect_uris || []).join('\n');
+    document.getElementById('editTrusted').checked = !!client.trusted;
+    document.getElementById('editDisabled').checked = !!client.disabled;
+    document.getElementById('editModal').classList.remove('hidden');
+}
+
+async function submitCreateClient(e) {
+    e.preventDefault();
+    const uris = document.getElementById('newRedirectUris').value.split('\n').map(u => u.trim()).filter(Boolean);
+    const payload = {
+        client_id: document.getElementById('newClientId').value.trim(),
+        client_name: document.getElementById('newClientName').value.trim(),
+        client_type: document.getElementById('newClientType').value,
+        redirect_uris: uris,
+        trusted: document.getElementById('newTrusted').checked,
+        generate_secret: document.getElementById('newClientType').value === 'confidential'
+    };
+
+    try {
+        const resp = await fetch('/api/admin/clients', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || 'Failed to create client');
+
+        closeModals();
+        if (data.client_secret) {
+            document.getElementById('secretDisplay').value = data.client_secret;
+            document.getElementById('secretModal').classList.remove('hidden');
+        } else {
+            location.reload();
+        }
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+async function submitEditClient(e) {
+    e.preventDefault();
+    const clientId = document.getElementById('editClientId').value;
+    const uris = document.getElementById('editRedirectUris').value.split('\n').map(u => u.trim()).filter(Boolean);
+    const payload = {
+        client_name: document.getElementById('editClientName').value.trim(),
+        client_type: document.getElementById('editClientType').value,
+        redirect_uris: uris,
+        trusted: document.getElementById('editTrusted').checked,
+        disabled: document.getElementById('editDisabled').checked,
+    };
+
+    try {
+        const resp = await fetch('/api/admin/clients/' + encodeURIComponent(clientId), {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || 'Failed to update client');
+        location.reload();
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+async function regenerateSecret(clientId) {
+    if (!confirm(`Regenerate client secret for '${clientId}'? Any existing integration using the old secret will break immediately.`)) return;
+    try {
+        const resp = await fetch(`/api/admin/clients/${encodeURIComponent(clientId)}/regenerate-secret`, {
+            method: 'POST'
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || 'Failed to regenerate secret');
+        document.getElementById('secretDisplay').value = data.client_secret;
+        document.getElementById('secretModal').classList.remove('hidden');
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+async function deleteClient(clientId) {
+    if (!confirm(`Are you sure you want to PERMANENTLY delete client '${clientId}'?`)) return;
+    try {
+        const resp = await fetch(`/api/admin/clients/${encodeURIComponent(clientId)}`, {
+            method: 'DELETE'
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || 'Failed to delete client');
+        location.reload();
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+function copySecret() {
+    const el = document.getElementById('secretDisplay');
+    el.select();
+    document.execCommand('copy');
+    alert('Client secret copied to clipboard.');
+}
+</script>
+{% endblock %}

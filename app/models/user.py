@@ -1,7 +1,7 @@
 """Veylor User document model."""
 
 from datetime import datetime, timezone
-from typing import Optional
+from typing import List, Optional
 from beanie import Document, Indexed
 from pydantic import Field
 import pymongo
@@ -20,6 +20,8 @@ class User(Document):
     avatar_url: Optional[str] = Field(default=None)
     google_sub: Optional[str] = Field(default=None)
     auth_provider: str = Field(default="local")
+    is_admin: bool = Field(default=False)
+    authorized_apps: List[str] = Field(default_factory=list, description="Apps accessed: egarage, relay, pager, warden")
     disabled: bool = Field(default=False)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -30,4 +32,6 @@ class User(Document):
         indexes = [
             [("email", pymongo.ASCENDING)],
             [("created_at", pymongo.DESCENDING)],
+            [("authorized_apps", pymongo.ASCENDING)],
+            [("is_admin", pymongo.ASCENDING)],
         ]

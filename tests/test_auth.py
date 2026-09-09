@@ -252,3 +252,22 @@ async def test_google_auth_flow(client):
         linked_user = await User.find_one(User.email == "existing_local@veylor.dev")
         assert linked_user.google_sub == "google_uid_112233"
         assert linked_user.email_verified is True
+
+    # 3. Direct API call to POST /api/auth/google
+    mock_api_claims = {
+        "sub": "google_uid_api_9988",
+        "email": "api_google_user@veylor.dev",
+        "email_verified": True,
+        "name": "API Google User",
+    }
+    with patch("app.api.auth.verify_google_id_token", return_value=mock_api_claims):
+        api_resp = await client.post(
+            "/api/auth/google",
+            json={"id_token": "valid_api_google_id_token"},
+        )
+        assert api_resp.status_code == 200
+        data = api_resp.json()
+        assert data["email"] == "api_google_user@veylor.dev"
+        assert data["id"].startswith("usr_")
+        assert "veylor_session" in api_resp.cookies
+

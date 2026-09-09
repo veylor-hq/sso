@@ -1,0 +1,180 @@
+{% extends "admin/layout.html" %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    <!-- Top Metric Grid -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-[#161616] border border-[#333333] p-4">
+            <div class="text-[11px] font-mono text-[#71717a] uppercase tracking-wider">Total Registered Users</div>
+            <div class="text-2xl font-bold font-mono text-[#fafafa] mt-2">{{ insights.summary.total_users }}</div>
+            <div class="text-[11px] font-mono text-emerald-400 mt-1">
+                {{ insights.summary.verified_users }} verified ({{ ((insights.summary.verified_users / (insights.summary.total_users or 1)) * 100)|round(1) }}%)
+            </div>
+        </div>
+
+        <div class="bg-[#161616] border border-[#333333] p-4">
+            <div class="text-[11px] font-mono text-[#71717a] uppercase tracking-wider">Active Users (24h / 7d)</div>
+            <div class="text-2xl font-bold font-mono text-[#fafafa] mt-2">
+                {{ insights.summary.active_users_24h }} <span class="text-xs text-[#71717a] font-normal">/ 24h</span>
+            </div>
+            <div class="text-[11px] font-mono text-[#a1a1aa] mt-1">
+                {{ insights.summary.active_users_7d }} active in past 7 days
+            </div>
+        </div>
+
+        <div class="bg-[#161616] border border-[#333333] p-4">
+            <div class="text-[11px] font-mono text-[#71717a] uppercase tracking-wider">Auth Providers</div>
+            <div class="text-2xl font-bold font-mono text-[#fafafa] mt-2">
+                {{ insights.providers.local }} <span class="text-xs text-[#71717a] font-normal">local</span> / {{ insights.providers.google }} <span class="text-xs text-[#71717a] font-normal">google</span>
+            </div>
+            <div class="text-[11px] font-mono text-[#a1a1aa] mt-1">
+                Argon2id vs Google OAuth2
+            </div>
+        </div>
+
+        <div class="bg-[#161616] border border-[#333333] p-4">
+            <div class="text-[11px] font-mono text-[#71717a] uppercase tracking-wider">Ecosystem Applications</div>
+            <div class="text-2xl font-bold font-mono text-[#fafafa] mt-2">
+                {{ insights.summary.total_clients }}
+            </div>
+            <div class="text-[11px] font-mono text-[#a1a1aa] mt-1">
+                {{ insights.summary.trusted_clients }} trusted first-party clients
+            </div>
+        </div>
+    </div>
+
+    <!-- Middle: App Distribution & Session Health -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Apps Distribution Breakdown -->
+        <div class="lg:col-span-2 bg-[#161616] border border-[#333333] p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-[#2a2a2a] pb-3">
+                <h2 class="text-xs font-bold font-mono text-[#fafafa] uppercase tracking-wider">Application Access Distribution</h2>
+                <span class="text-[10px] font-mono text-[#71717a]">Ecosystem Breakdown</span>
+            </div>
+
+            <div class="space-y-4 font-mono text-xs">
+                {% set total = insights.summary.total_users or 1 %}
+                <div>
+                    <div class="flex justify-between text-[#a1a1aa] mb-1">
+                        <span class="text-[#fafafa] font-semibold">eGarage</span>
+                        <span>{{ insights.apps_distribution.egarage or 0 }} users ({{ (((insights.apps_distribution.egarage or 0) / total) * 100)|round(1) }}%)</span>
+                    </div>
+                    <div class="w-full bg-[#111111] h-2 border border-[#2a2a2a]">
+                        <div class="bg-[#fafafa] h-full" style="width: {{ [(((insights.apps_distribution.egarage or 0) / total) * 100), 100]|min }}%"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-[#a1a1aa] mb-1">
+                        <span class="text-[#fafafa] font-semibold">Veylor Relay</span>
+                        <span>{{ insights.apps_distribution.relay or 0 }} users ({{ (((insights.apps_distribution.relay or 0) / total) * 100)|round(1) }}%)</span>
+                    </div>
+                    <div class="w-full bg-[#111111] h-2 border border-[#2a2a2a]">
+                        <div class="bg-blue-400 h-full" style="width: {{ [(((insights.apps_distribution.relay or 0) / total) * 100), 100]|min }}%"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-[#a1a1aa] mb-1">
+                        <span class="text-[#fafafa] font-semibold">Veylor Pager</span>
+                        <span>{{ insights.apps_distribution.pager or 0 }} users ({{ (((insights.apps_distribution.pager or 0) / total) * 100)|round(1) }}%)</span>
+                    </div>
+                    <div class="w-full bg-[#111111] h-2 border border-[#2a2a2a]">
+                        <div class="bg-amber-400 h-full" style="width: {{ [(((insights.apps_distribution.pager or 0) / total) * 100), 100]|min }}%"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-[#a1a1aa] mb-1">
+                        <span class="text-[#fafafa] font-semibold">Veylor Warden</span>
+                        <span>{{ insights.apps_distribution.warden or 0 }} users ({{ (((insights.apps_distribution.warden or 0) / total) * 100)|round(1) }}%)</span>
+                    </div>
+                    <div class="w-full bg-[#111111] h-2 border border-[#2a2a2a]">
+                        <div class="bg-purple-400 h-full" style="width: {{ [(((insights.apps_distribution.warden or 0) / total) * 100), 100]|min }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Session & Cryptographic Info Card -->
+        <div class="bg-[#161616] border border-[#333333] p-6 space-y-4">
+            <div class="border-b border-[#2a2a2a] pb-3">
+                <h2 class="text-xs font-bold font-mono text-[#fafafa] uppercase tracking-wider">Security State</h2>
+                <span class="text-[10px] font-mono text-[#71717a]">Cryptographic Parameters</span>
+            </div>
+
+            <div class="space-y-3 font-mono text-xs">
+                <div>
+                    <span class="text-[#71717a] block text-[10px] uppercase">Active SSO Sessions</span>
+                    <span class="text-lg font-bold text-[#fafafa]">{{ insights.summary.active_sessions }}</span>
+                </div>
+                <div>
+                    <span class="text-[#71717a] block text-[10px] uppercase">Signing Key ID</span>
+                    <span class="text-[#fafafa] text-[11px] bg-[#111111] px-2 py-0.5 border border-[#2a2a2a] inline-block mt-0.5">
+                        {{ settings.SIGNING_KEY_ID }}
+                    </span>
+                </div>
+                <div>
+                    <span class="text-[#71717a] block text-[10px] uppercase">Password Hashing Algorithm</span>
+                    <span class="text-[#fafafa] text-[11px]">Argon2id (m=65536, t=3, p=4)</span>
+                </div>
+                <div>
+                    <span class="text-[#71717a] block text-[10px] uppercase">OIDC Discovery</span>
+                    <a href="/.well-known/openid-configuration" target="_blank" class="text-xs text-blue-400 hover:underline">
+                        /.well-known/openid-configuration
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Users Table -->
+    <div class="bg-[#161616] border border-[#333333] p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-[#2a2a2a] pb-3">
+            <h2 class="text-xs font-bold font-mono text-[#fafafa] uppercase tracking-wider">Recent Registrations</h2>
+            <a href="/admin/users" class="text-xs font-mono text-[#a1a1aa] hover:text-[#fafafa]">View Full Directory &rarr;</a>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left font-mono text-xs">
+                <thead>
+                    <tr class="border-b border-[#2a2a2a] text-[#71717a] text-[10px] uppercase tracking-wider">
+                        <th class="py-2 px-3">Subject ID</th>
+                        <th class="py-2 px-3">Name</th>
+                        <th class="py-2 px-3">Email</th>
+                        <th class="py-2 px-3">Provider</th>
+                        <th class="py-2 px-3">Apps</th>
+                        <th class="py-2 px-3">Registered At</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-[#222222]">
+                    {% for u in insights.recent_users %}
+                    <tr class="hover:bg-[#141414] transition">
+                        <td class="py-2.5 px-3 text-[#a1a1aa] font-semibold">{{ u.id }}</td>
+                        <td class="py-2.5 px-3 text-[#fafafa]">{{ u.name }}</td>
+                        <td class="py-2.5 px-3 text-[#fafafa]">{{ u.email }}</td>
+                        <td class="py-2.5 px-3">
+                            {% if u.auth_provider == 'google' %}
+                            <span class="bg-[#111111] border border-blue-500/40 text-blue-400 px-1.5 py-0.5 text-[10px] uppercase">Google</span>
+                            {% else %}
+                            <span class="bg-[#111111] border border-[#444444] text-[#a1a1aa] px-1.5 py-0.5 text-[10px] uppercase">Local</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-2.5 px-3">
+                            <div class="flex flex-wrap gap-1">
+                                {% for app in u.authorized_apps %}
+                                <span class="bg-[#111111] border border-[#333333] text-[#a1a1aa] px-1.5 py-0.2 text-[9px] uppercase">{{ app }}</span>
+                                {% else %}
+                                <span class="text-[#555555] text-[10px]">-</span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td class="py-2.5 px-3 text-[#71717a]">{{ u.created_at[:19].replace('T', ' ') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

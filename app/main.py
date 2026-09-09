@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api import account_router, auth_router, admin_router, oauth_router, web_router
+from app.api import account_router, auth_router, admin_router, oauth_router, web_router, web_admin_router
 from app.config import get_settings
 from app.database import close_db, init_db
 
@@ -123,8 +123,9 @@ async def security_and_logging_middleware(request: Request, call_next):
 app.include_router(oauth_router)  # /.well-known/*, /authorize, /token, /userinfo
 app.include_router(auth_router)   # /api/auth/*
 app.include_router(account_router) # /api/account/*
-app.include_router(admin_router)  # /api/admin/clients/*
-app.include_router(web_router)    # /login, /register, /consent, /account, etc.
+app.include_router(admin_router)      # /api/admin/*
+app.include_router(web_admin_router)  # /admin, /admin/insights, /admin/clients, etc.
+app.include_router(web_router)        # /login, /register, /consent, /account, etc.
 
 
 @app.get("/", include_in_schema=False)

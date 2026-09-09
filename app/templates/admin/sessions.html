@@ -1,0 +1,99 @@
+{% extends "admin/layout.html" %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    <!-- Top Action Bar -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#333333] pb-4">
+        <div>
+            <h2 class="text-sm font-bold font-mono text-[#fafafa] uppercase tracking-wider">Active Browser Sessions</h2>
+            <p class="text-xs font-mono text-[#71717a] mt-0.5">Live single sign-on tokens across browser instances</p>
+        </div>
+        <span class="text-xs font-mono text-emerald-400 bg-[#111111] border border-emerald-500/40 px-3 py-1.5">
+            {{ sessions|length }} Active Session(s)
+        </span>
+    </div>
+
+    <!-- Sessions Table -->
+    <div class="bg-[#161616] border border-[#333333]">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left font-mono text-xs">
+                <thead>
+                    <tr class="border-b border-[#2a2a2a] text-[#71717a] text-[10px] uppercase tracking-wider bg-[#111111]">
+                        <th class="py-3 px-4">User</th>
+                        <th class="py-3 px-4">IP Address</th>
+                        <th class="py-3 px-4">Client Platform (User Agent)</th>
+                        <th class="py-3 px-4">Initiated</th>
+                        <th class="py-3 px-4">Last Touch</th>
+                        <th class="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-[#222222]">
+                    {% for s in sessions %}
+                    <tr class="hover:bg-[#141414] transition">
+                        <td class="py-3 px-4">
+                            <div class="font-bold text-[#fafafa]">{{ s.user_name }}</div>
+                            <div class="text-[11px] text-[#71717a]">{{ s.user_email }}</div>
+                        </td>
+                        <td class="py-3 px-4 text-[#a1a1aa]">{{ s.ip_address or 'Unknown' }}</td>
+                        <td class="py-3 px-4 text-[#a1a1aa] max-w-sm truncate" title="{{ s.user_agent }}">
+                            {{ s.user_agent or 'Unknown' }}
+                        </td>
+                        <td class="py-3 px-4 text-[#71717a] text-[11px]">
+                            {{ s.created_at[:16].replace('T', ' ') }}
+                        </td>
+                        <td class="py-3 px-4 text-[#a1a1aa] text-[11px]">
+                            {{ s.last_active_at[:16].replace('T', ' ') }}
+                        </td>
+                        <td class="py-3 px-4 text-right space-x-2">
+                            <button onclick="terminateSession('{{ s.session_id }}')"
+                                    class="text-[11px] text-red-400 hover:underline bg-[#222222] px-2 py-1 border border-[#444444]">
+                                Terminate
+                            </button>
+                            <button onclick="terminateAllUserSessions('{{ s.user_id }}', '{{ s.user_email }}')"
+                                    class="text-[11px] text-amber-400 hover:underline bg-[#222222] px-2 py-1 border border-[#444444]">
+                                Kill All User Sessions
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="py-8 text-center text-[#71717a]">No active browser sessions found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+async function terminateSession(id) {
+    if (!confirm('Terminate this session immediately?')) return;
+    try {
+        const resp = await fetch(`/api/admin/sessions/${encodeURIComponent(id)}`, {
+            method: 'DELETE'
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || 'Failed to revoke session');
+        location.reload();
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+async function terminateAllUserSessions(userId, email) {
+    if (!confirm(`Terminate ALL active sessions for user '${email}'?`)) return;
+    try {
+        const resp = await fetch(`/api/admin/users/${encodeURIComponent(userId)}/sessions`, {
+            method: 'DELETE'
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || 'Failed to revoke user sessions');
+        alert(data.message || 'Sessions terminated');
+        location.reload();
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+</script>
+{% endblock %}

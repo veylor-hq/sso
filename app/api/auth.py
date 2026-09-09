@@ -17,9 +17,10 @@ from app.services.authentication import (
     reset_password_with_token,
     verify_email_with_token,
 )
+from app.security.google import verify_google_id_token
 from app.services.email import send_password_reset_email, send_verification_email
 from app.services.sessions import create_session, revoke_session
-from app.services.users import create_user
+from app.services.users import create_user, get_or_create_google_user
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
@@ -217,3 +218,42 @@ async def resend_verification(payload: ResendVerificationRequest):
     if success and token:
         await send_verification_email(payload.email, token)
     return {"message": "If an unverified account with that email exists, a verification link has been sent."}
+
+
+class GoogleLoginRequest(BaseModel):
+    id_token: str
+
+
+@router.post("/google", response_model=UserResponse)
+async def login_google(
+    payload: GoogleLoginRequest,
+    request: Request,
+    response: Response,
+):
+    """Authenticate or register user via Google ID Token for first-party clients."""
+    google_payload = await verify_google_id_token(payload.id_token)
+    if not google_payload:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired Google ID Token",
+        )
+
+    email = google_payload.get("email")
+    google_sub = google_payload.get("sub")
+    name = google_payload.get("name") or (email.split("@")[0] if email else "Veylor User")
+    picture = google_payload.get("picture")
+
+    user = await get_or_create_google_user(
+        email=email,
+        google_sub=google_sub,
+        name=name,
+        avatar_url=picture,
+    )
+
+    ip = get_client_ip(request)
+    ua = request.headers.get("User-Agent")
+    _, raw_token = await create_session(user_id=user.id, ip_address=ip, user_agent=ua)
+    _set_session_cookie(response, raw_token)
+
+    return UserResponse.from_user(user)
+

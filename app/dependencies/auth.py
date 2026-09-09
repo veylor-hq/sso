@@ -101,3 +101,33 @@ async def require_admin_key(
             detail="Unauthorized: Invalid Admin API Key",
         )
     return True
+
+
+async def require_admin_user(
+    request: Request,
+    user: Optional[User] = Depends(get_optional_user),
+    x_admin_api_key: Optional[str] = Header(None, alias="X-Admin-API-Key"),
+) -> Optional[User]:
+    """Require an admin either via active session (is_admin or email in ADMIN_EMAILS) or Admin API Key."""
+    settings = get_settings()
+
+    # Path 1: API key in header, query param, or admin session cookie
+    api_key = (
+        x_admin_api_key
+        or request.query_params.get("admin_key")
+        or request.cookies.get("veylor_admin_key")
+    )
+    if api_key and constant_time_compare(api_key, settings.ADMIN_API_KEY):
+        return user
+
+    # Path 2: Authenticated user with admin status
+    if user:
+        admin_emails = [e.lower() for e in settings.ADMIN_EMAILS]
+        if user.is_admin or user.email.lower() in admin_emails:
+            return user
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Administrator privilege required",
+    )
+

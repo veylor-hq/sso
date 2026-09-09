@@ -53,6 +53,9 @@ class Settings(BaseSettings):
 
     # Admin API
     ADMIN_API_KEY: str = Field(default="veylor_admin_secret_dev_change_me")
+    ADMIN_EMAILS: Union[List[str], str] = Field(
+        default=["csigorek@gmail.com"]
+    )
 
     # Google OAuth2
     GOOGLE_CLIENT_ID: str = Field(
@@ -95,6 +98,24 @@ class Settings(BaseSettings):
             return [i.strip() for i in clean.split(",") if i.strip()]
         elif isinstance(v, (list, tuple)):
             return [str(i).strip() for i in v if str(i).strip()]
+        return []
+
+    @field_validator("ADMIN_EMAILS")
+    @classmethod
+    def assemble_admin_emails(cls, v: Union[List[str], str]) -> List[str]:
+        if isinstance(v, str):
+            clean = v.strip()
+            if clean.startswith("[") and clean.endswith("]"):
+                try:
+                    import json
+                    parsed = json.loads(clean)
+                    if isinstance(parsed, list):
+                        return [str(i).strip().lower() for i in parsed if str(i).strip()]
+                except Exception:
+                    pass
+            return [i.strip().lower() for i in clean.split(",") if i.strip()]
+        elif isinstance(v, (list, tuple)):
+            return [str(i).strip().lower() for i in v if str(i).strip()]
         return []
 
     model_config = SettingsConfigDict(

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Veylor Admin Console{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <!-- Admin Header Banner -->
+    <div class="border border-[#333333] bg-[#161616] p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-[#fafafa] text-[#111111] font-mono font-black text-sm flex items-center justify-center">
+                V
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="text-sm font-bold tracking-widest text-[#fafafa] uppercase">Veylor SSO // Admin Portal</h1>
+                    <span class="text-[10px] font-mono bg-[#111111] border border-emerald-500/50 text-emerald-400 px-1.5 py-0.2">
+                        AUTHORIZED
+                    </span>
+                </div>
+                <p class="text-[11px] font-mono text-[#71717a] mt-0.5">Central Identity & Access Management Control Plane</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3 text-xs font-mono">
+            {% if admin_user %}
+            <div class="bg-[#111111] border border-[#2a2a2a] px-3 py-1.5 text-[#a1a1aa] flex items-center gap-2">
+                <span class="w-1.5 h-1.5 bg-emerald-400"></span>
+                <span>{{ admin_user.email }}</span>
+            </div>
+            {% else %}
+            <div class="bg-[#111111] border border-[#2a2a2a] px-3 py-1.5 text-amber-400 flex items-center gap-2">
+                <span class="w-1.5 h-1.5 bg-amber-400"></span>
+                <span>ADMIN_KEY_AUTH</span>
+            </div>
+            {% endif %}
+            <a href="/account" class="btn-veylor-secondary px-3 py-1.5 text-[11px]">User Account</a>
+            <a href="/admin/logout" class="btn-veylor-danger px-3 py-1.5 text-[11px]">Lock Console</a>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="border-b border-[#333333] flex flex-wrap gap-1 text-xs font-mono">
+        <a href="/admin/insights"
+           class="px-4 py-2.5 uppercase tracking-wider border-b-2 transition flex items-center gap-2 {% if active_tab == 'insights' %}border-[#fafafa] text-[#fafafa] bg-[#161616]{% else %}border-transparent text-[#71717a] hover:text-[#fafafa] hover:bg-[#141414]{% endif %}">
+            <span>[01]</span> Insights & Overview
+        </a>
+        <a href="/admin/clients"
+           class="px-4 py-2.5 uppercase tracking-wider border-b-2 transition flex items-center gap-2 {% if active_tab == 'clients' %}border-[#fafafa] text-[#fafafa] bg-[#161616]{% else %}border-transparent text-[#71717a] hover:text-[#fafafa] hover:bg-[#141414]{% endif %}">
+            <span>[02]</span> Trusted Websites (OAuth)
+        </a>
+        <a href="/admin/users"
+           class="px-4 py-2.5 uppercase tracking-wider border-b-2 transition flex items-center gap-2 {% if active_tab == 'users' %}border-[#fafafa] text-[#fafafa] bg-[#161616]{% else %}border-transparent text-[#71717a] hover:text-[#fafafa] hover:bg-[#141414]{% endif %}">
+            <span>[03]</span> User Directory
+        </a>
+        <a href="/admin/sessions"
+           class="px-4 py-2.5 uppercase tracking-wider border-b-2 transition flex items-center gap-2 {% if active_tab == 'sessions' %}border-[#fafafa] text-[#fafafa] bg-[#161616]{% else %}border-transparent text-[#71717a] hover:text-[#fafafa] hover:bg-[#141414]{% endif %}">
+            <span>[04]</span> Active Sessions
+        </a>
+    </div>
+
+    <!-- Main Admin Tab Content -->
+    {% block admin_content %}{% endblock %}
+</div>
+{% endblock %}

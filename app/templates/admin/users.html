@@ -1,0 +1,410 @@
+{% extends "admin/layout.html" %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    <!-- Top Action & Search Bar -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#333333] pb-4">
+        <div>
+            <h2 class="text-sm font-bold font-mono text-[#fafafa] uppercase tracking-wider">Global User Directory</h2>
+            <p class="text-xs font-mono text-[#71717a] mt-0.5">Central identity records across all Veylor applications</p>
+        </div>
+        <button onclick="openCreateUserModal()" class="btn-veylor-primary px-4 py-2 text-xs tracking-wider">
+            + Create User
+        </button>
+    </div>
+
+    <!-- Filters Control Bar -->
+    <div class="bg-[#161616] border border-[#333333] p-4 space-y-4 font-mono text-xs">
+        <!-- App Filter Chips -->
+        <div class="flex flex-wrap items-center gap-2">
+            <span class="text-[#71717a] uppercase text-[10px] tracking-wider mr-2">Filter By App:</span>
+            <a href="?app=&search={{ search or '' }}&provider={{ provider or '' }}"
+               class="px-3 py-1 border transition {% if not current_app %}bg-[#fafafa] text-[#111111] border-[#fafafa] font-bold{% else %}border-[#333333] text-[#a1a1aa] hover:border-[#666666]{% endif %}">
+                ALL APPS ({{ total_users }})
+            </a>
+            <a href="?app=egarage&search={{ search or '' }}&provider={{ provider or '' }}"
+               class="px-3 py-1 border transition {% if current_app == 'egarage' %}bg-[#fafafa] text-[#111111] border-[#fafafa] font-bold{% else %}border-[#333333] text-[#a1a1aa] hover:border-[#666666]{% endif %}">
+                EGARAGE
+            </a>
+            <a href="?app=relay&search={{ search or '' }}&provider={{ provider or '' }}"
+               class="px-3 py-1 border transition {% if current_app == 'relay' %}bg-[#fafafa] text-[#111111] border-[#fafafa] font-bold{% else %}border-[#333333] text-[#a1a1aa] hover:border-[#666666]{% endif %}">
+                RELAY
+            </a>
+            <a href="?app=pager&search={{ search or '' }}&provider={{ provider or '' }}"
+               class="px-3 py-1 border transition {% if current_app == 'pager' %}bg-[#fafafa] text-[#111111] border-[#fafafa] font-bold{% else %}border-[#333333] text-[#a1a1aa] hover:border-[#666666]{% endif %}">
+                PAGER
+            </a>
+            <a href="?app=warden&search={{ search or '' }}&provider={{ provider or '' }}"
+               class="px-3 py-1 border transition {% if current_app == 'warden' %}bg-[#fafafa] text-[#111111] border-[#fafafa] font-bold{% else %}border-[#333333] text-[#a1a1aa] hover:border-[#666666]{% endif %}">
+                WARDEN
+            </a>
+        </div>
+
+        <!-- Search & Secondary Filters -->
+        <form method="GET" action="/admin/users" class="flex flex-col sm:flex-row gap-3">
+            <input type="hidden" name="app" value="{{ current_app or '' }}">
+            <div class="flex-1">
+                <input type="text"
+                       name="search"
+                       value="{{ search or '' }}"
+                       placeholder="Search email, name, or usr_... ID"
+                       class="w-full px-3 py-2 bg-[#111111] border border-[#333333] text-[#fafafa] placeholder-[#555555]">
+            </div>
+            <div class="w-48">
+                <select name="provider" class="w-full px-3 py-2 bg-[#111111] border border-[#333333] text-[#fafafa]">
+                    <option value="">All Providers</option>
+                    <option value="local" {% if provider == 'local' %}selected{% endif %}>Local (Argon2id)</option>
+                    <option value="google" {% if provider == 'google' %}selected{% endif %}>Google OAuth2</option>
+                </select>
+            </div>
+            <button type="submit" class="btn-veylor-secondary px-4 py-2">Filter</button>
+            {% if search or provider or current_app %}
+            <a href="/admin/users" class="btn-veylor-danger px-3 py-2 text-center">Reset</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Users Table -->
+    <div class="bg-[#161616] border border-[#333333]">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left font-mono text-xs">
+                <thead>
+                    <tr class="border-b border-[#2a2a2a] text-[#71717a] text-[10px] uppercase tracking-wider bg-[#111111]">
+                        <th class="py-3 px-4">Subject ID</th>
+                        <th class="py-3 px-4">Name</th>
+                        <th class="py-3 px-4">Email</th>
+                        <th class="py-3 px-4">Assigned Apps</th>
+                        <th class="py-3 px-4">Provider</th>
+                        <th class="py-3 px-4">Status</th>
+                        <th class="py-3 px-4">Last Active</th>
+                        <th class="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-[#222222]">
+                    {% for u in users %}
+                    <tr class="hover:bg-[#141414] transition">
+                        <td class="py-3 px-4 text-[#a1a1aa] font-semibold">
+                            <span class="bg-[#111111] px-1.5 py-0.5 border border-[#2a2a2a]">{{ u.id }}</span>
+                        </td>
+                        <td class="py-3 px-4 text-[#fafafa]">
+                            {{ u.name }}
+                            {% if u.is_admin %}
+                            <span class="ml-1 text-[9px] uppercase border border-amber-500/50 text-amber-400 px-1">Admin</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-4 text-[#fafafa]">
+                            <div>{{ u.email }}</div>
+                            {% if u.email_verified %}
+                            <span class="text-[9px] uppercase text-emerald-400">Verified</span>
+                            {% else %}
+                            <span class="text-[9px] uppercase text-amber-400">Unverified</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-4">
+                            <div class="flex flex-wrap gap-1">
+                                {% for app in u.authorized_apps %}
+                                <span class="bg-[#111111] border border-[#333333] text-[#a1a1aa] px-1.5 py-0.2 text-[9px] uppercase">{{ app }}</span>
+                                {% else %}
+                                <span class="text-[#555555] text-[10px]">None</span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td class="py-3 px-4">
+                            {% if u.auth_provider == 'google' %}
+                            <span class="border border-blue-500/40 text-blue-400 bg-[#111111] px-1.5 py-0.5 text-[9px] uppercase">Google</span>
+                            {% else %}
+                            <span class="border border-[#444444] text-[#a1a1aa] bg-[#111111] px-1.5 py-0.5 text-[9px] uppercase">Local</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-4">
+                            {% if u.disabled %}
+                            <span class="border border-red-500/40 text-red-400 bg-[#111111] px-1.5 py-0.5 text-[9px] uppercase">Disabled</span>
+                            {% else %}
+                            <span class="border border-emerald-500/40 text-emerald-400 bg-[#111111] px-1.5 py-0.5 text-[9px] uppercase">Active</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-4 text-[#71717a] text-[11px]">
+                            {{ u.last_login_at[:16].replace('T', ' ') if u.last_login_at else 'Never' }}
+                        </td>
+                        <td class="py-3 px-4 text-right space-x-1">
+                            <button onclick='openEditUserModal({{ u|tojson }})'
+                                    class="text-[11px] text-[#fafafa] hover:underline bg-[#222222] px-2 py-1 border border-[#444444]">
+                                Edit
+                            </button>
+                            <button onclick="openResetPasswordModal('{{ u.id }}', '{{ u.email }}')"
+                                    class="text-[11px] text-amber-400 hover:underline bg-[#222222] px-2 py-1 border border-[#444444]">
+                                Password
+                            </button>
+                            <button onclick="deleteUser('{{ u.id }}', '{{ u.email }}')"
+                                    class="text-[11px] text-red-400 hover:underline bg-[#222222] px-2 py-1 border border-[#444444]">
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="py-8 text-center text-[#71717a]">No users found matching query criteria.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Create User -->
+<div id="createUserModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+    <div class="bg-[#161616] border border-[#333333] w-full max-w-lg p-6 space-y-4 font-mono">
+        <div class="flex items-center justify-between border-b border-[#2a2a2a] pb-3">
+            <h3 class="text-sm font-bold text-[#fafafa] uppercase tracking-wider">Create Central User</h3>
+            <button onclick="closeModals()" class="text-[#a1a1aa] hover:text-white">&times;</button>
+        </div>
+
+        <form onsubmit="submitCreateUser(event)" class="space-y-4 text-xs">
+            <div>
+                <label class="block text-[#a1a1aa] uppercase mb-1">Email Address</label>
+                <input type="email" id="newEmail" required class="w-full px-3 py-2 bg-[#111111] border border-[#333333] text-[#fafafa]">
+            </div>
+            <div>
+                <label class="block text-[#a1a1aa] uppercase mb-1">Full Name</label>
+                <input type="text" id="newName" required class="w-full px-3 py-2 bg-[#111111] border border-[#333333] text-[#fafafa]">
+            </div>
+            <div>
+                <label class="block text-[#a1a1aa] uppercase mb-1">Password</label>
+                <input type="password" id="newPassword" required minlength="8" class="w-full px-3 py-2 bg-[#111111] border border-[#333333] text-[#fafafa]">
+            </div>
+            <div>
+                <label class="block text-[#a1a1aa] uppercase mb-1">Assign Applications (comma-separated: egarage, relay, pager, warden)</label>
+                <input type="text" id="newApps" value="egarage" class="w-full px-3 py-2 bg-[#111111] border border-[#333333] text-[#fafafa]">
+            </div>
+            <div class="flex items-center gap-6">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="newVerified" checked class="accent-white">
+                    <span class="text-[#a1a1aa]">Mark Email as Verified</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="newIsAdmin" class="accent-amber-400">
+                    <span class="text-amber-400">Admin Privilege</span>
+                </label>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-3 border-t border-[#2a2a2a]">
+                <button type="button" onclick="closeModals()" class="btn-veylor-secondary px-4 py-2 text-xs">Cancel</button>
+                <button type="submit" class="btn-veylor-primary px-4 py-2 text-xs">Create User</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Edit User -->
+<div id="editUserModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+    <div class="bg-[#161616] border border-[#333333] w-full max-w-lg p-6 space-y-4 font-mono">
+        <div class="flex items-center justify-between border-b border-[#2a2a2a] pb-3">
+            <h3 class="text-sm font-bold text-[#fafafa] uppercase tracking-wider">Edit User: <span id="editUserTitle" class="text-amber-400"></span></h3>
+            <button onclick="closeModals()" class="text-[#a1a1aa] hover:text-white">&times;</button>
+        </div>
+
+        <form onsubmit="submitEditUser(event)" class="space-y-4 text-xs">
+            <input type="hidden" id="editUserId">
+            <div>
+                <label class="block text-[#a1a1aa] uppercase mb-1">Full Name</label>
+                <input type="text" id="editName" required class="w-full px-3 py-2 bg-[#111111] border border-[#333333] text-[#fafafa]">
+            </div>
+            <div>
+                <label class="block text-[#a1a1aa] uppercase mb-1">Authorized Applications (comma-separated)</label>
+                <input type="text" id="editApps" class="w-full px-3 py-2 bg-[#111111] border border-[#333333] text-[#fafafa]"
+                       placeholder="egarage, relay, pager, warden">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="editVerified" class="accent-white">
+                    <span class="text-[#a1a1aa]">Email Verified</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="editIsAdmin" class="accent-amber-400">
+                    <span class="text-amber-400">Admin Privilege</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="editDisabled" class="accent-red-500">
+                    <span class="text-red-400">Disabled / Blocked</span>
+                </label>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-3 border-t border-[#2a2a2a]">
+                <button type="button" onclick="closeModals()" class="btn-veylor-secondary px-4 py-2 text-xs">Cancel</button>
+                <button type="submit" class="btn-veylor-primary px-4 py-2 text-xs">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Reset Password -->
+<div id="resetPasswordModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+    <div class="bg-[#161616] border border-[#333333] w-full max-w-md p-6 space-y-4 font-mono">
+        <div class="flex items-center justify-between border-b border-[#2a2a2a] pb-3">
+            <h3 class="text-sm font-bold text-amber-400 uppercase tracking-wider">Reset Password</h3>
+            <button onclick="closeModals()" class="text-[#a1a1aa] hover:text-white">&times;</button>
+        </div>
+
+        <form onsubmit="submitResetPassword(event)" class="space-y-4 text-xs">
+            <input type="hidden" id="resetUserId">
+            <p class="text-[#a1a1aa]">Manage credentials for <span id="resetUserEmail" class="text-[#fafafa] font-bold"></span>:</p>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-[#a1a1aa] uppercase mb-1">Set New Password Directly</label>
+                    <input type="password" id="resetNewPass" minlength="8" placeholder="Enter new password..."
+                           class="w-full px-3 py-2 bg-[#111111] border border-[#333333] text-[#fafafa]">
+                </div>
+                <div class="text-center text-[#71717a] uppercase text-[10px]">— OR —</div>
+                <button type="button" onclick="dispatchResetEmail()"
+                        class="w-full btn-veylor-secondary py-2 text-xs">
+                    Dispatch Password Reset Email
+                </button>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-3 border-t border-[#2a2a2a]">
+                <button type="button" onclick="closeModals()" class="btn-veylor-secondary px-4 py-2 text-xs">Close</button>
+                <button type="submit" class="btn-veylor-primary px-4 py-2 text-xs">Update Password</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function closeModals() {
+    document.getElementById('createUserModal').classList.add('hidden');
+    document.getElementById('editUserModal').classList.add('hidden');
+    document.getElementById('resetPasswordModal').classList.add('hidden');
+}
+
+function openCreateUserModal() {
+    document.getElementById('createUserModal').classList.remove('hidden');
+}
+
+function openEditUserModal(user) {
+    document.getElementById('editUserId').value = user.id;
+    document.getElementById('editUserTitle').innerText = user.email;
+    document.getElementById('editName').value = user.name;
+    document.getElementById('editApps').value = (user.authorized_apps || []).join(', ');
+    document.getElementById('editVerified').checked = !!user.email_verified;
+    document.getElementById('editIsAdmin').checked = !!user.is_admin;
+    document.getElementById('editDisabled').checked = !!user.disabled;
+    document.getElementById('editUserModal').classList.remove('hidden');
+}
+
+function openResetPasswordModal(id, email) {
+    document.getElementById('resetUserId').value = id;
+    document.getElementById('resetUserEmail').innerText = email;
+    document.getElementById('resetNewPass').value = '';
+    document.getElementById('resetPasswordModal').classList.remove('hidden');
+}
+
+async function submitCreateUser(e) {
+    e.preventDefault();
+    const apps = document.getElementById('newApps').value.split(',').map(a => a.trim().toLowerCase()).filter(Boolean);
+    const payload = {
+        email: document.getElementById('newEmail').value.trim(),
+        name: document.getElementById('newName').value.trim(),
+        password: document.getElementById('newPassword').value,
+        email_verified: document.getElementById('newVerified').checked,
+        is_admin: document.getElementById('newIsAdmin').checked,
+        authorized_apps: apps,
+    };
+
+    try {
+        const resp = await fetch('/api/admin/users', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || 'Failed to create user');
+        location.reload();
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+async function submitEditUser(e) {
+    e.preventDefault();
+    const id = document.getElementById('editUserId').value;
+    const apps = document.getElementById('editApps').value.split(',').map(a => a.trim().toLowerCase()).filter(Boolean);
+    const payload = {
+        name: document.getElementById('editName').value.trim(),
+        email_verified: document.getElementById('editVerified').checked,
+        is_admin: document.getElementById('editIsAdmin').checked,
+        disabled: document.getElementById('editDisabled').checked,
+        authorized_apps: apps,
+    };
+
+    try {
+        const resp = await fetch('/api/admin/users/' + encodeURIComponent(id), {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || 'Failed to update user');
+        location.reload();
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+async function submitResetPassword(e) {
+    e.preventDefault();
+    const id = document.getElementById('resetUserId').value;
+    const pass = document.getElementById('resetNewPass').value;
+    if (!pass || pass.length < 8) {
+        alert('Password must be at least 8 characters');
+        return;
+    }
+
+    try {
+        const resp = await fetch(`/api/admin/users/${encodeURIComponent(id)}/reset-password`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({new_password: pass})
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || 'Failed to update password');
+        alert('Password updated successfully');
+        closeModals();
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+async function dispatchResetEmail() {
+    const id = document.getElementById('resetUserId').value;
+    try {
+        const resp = await fetch(`/api/admin/users/${encodeURIComponent(id)}/reset-password`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({send_reset_email: true})
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || 'Failed to send reset email');
+        alert(data.message || 'Password reset email dispatched');
+        closeModals();
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+async function deleteUser(id, email) {
+    if (!confirm(`Are you sure you want to PERMANENTLY delete user '${email}' (${id})?`)) return;
+    try {
+        const resp = await fetch(`/api/admin/users/${encodeURIComponent(id)}`, {
+            method: 'DELETE'
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || 'Failed to delete user');
+        location.reload();
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+</script>
+{% endblock %}
