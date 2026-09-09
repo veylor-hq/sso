@@ -22,10 +22,19 @@
         {% endif %}
     </div>
 
-    <div class="mt-8">
+    <div class="mt-8 space-y-3">
+        {% if not success %}
+        <a href="/resend-verification" class="btn-veylor-primary w-full py-3 px-4 text-xs">
+            Resend Verification Email &rarr;
+        </a>
+        <a href="/login" class="btn-veylor-secondary w-full py-2.5 px-4 text-xs font-mono block">
+            &larr; Return to Sign In
+        </a>
+        {% else %}
         <a href="/login" class="btn-veylor-primary w-full py-3 px-4 text-xs">
             Proceed to Authentication &rarr;
         </a>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

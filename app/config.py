@@ -60,8 +60,9 @@ class Settings(BaseSettings):
     SMTP_USERNAME: Optional[str] = None
     SMTP_PASSWORD: Optional[str] = None
     SMTP_USE_TLS: bool = Field(default=False)
-    SMTP_FROM_EMAIL: str = Field(default="no-reply@veylor.dev")
-    SMTP_FROM_NAME: str = Field(default="Veylor Identity")
+    SMTP_STARTTLS: bool = Field(default=True)
+    SMTP_FROM_EMAIL: str = Field(default="contact@veylor.dev")
+    SMTP_FROM_NAME: str = Field(default="Veylor Systems")
 
     # Password Reset & Email Verification Token TTLs
     PASSWORD_RESET_TTL_SECONDS: int = Field(default=1800)  # 30 minutes

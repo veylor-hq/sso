@@ -13,6 +13,7 @@ from app.services.authentication import (
     authenticate_user,
     create_email_verification_token,
     create_password_reset_token,
+    resend_email_verification,
     reset_password_with_token,
     verify_email_with_token,
 )
@@ -38,6 +39,10 @@ class LoginRequest(BaseModel):
 
 
 class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResendVerificationRequest(BaseModel):
     email: EmailStr
 
 
@@ -200,3 +205,15 @@ async def verify_email(payload: VerifyEmailRequest):
     if not success:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=msg)
     return {"message": msg}
+
+
+@router.post("/resend-verification")
+async def resend_verification(payload: ResendVerificationRequest):
+    """Resend email verification link.
+
+    Always returns a generic message to prevent email enumeration attacks.
+    """
+    success, token = await resend_email_verification(payload.email)
+    if success and token:
+        await send_verification_email(payload.email, token)
+    return {"message": "If an unverified account with that email exists, a verification link has been sent."}

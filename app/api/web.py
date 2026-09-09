@@ -15,6 +15,7 @@ from app.services.authentication import (
     authenticate_user,
     create_email_verification_token,
     create_password_reset_token,
+    resend_email_verification,
     reset_password_with_token,
     verify_email_with_token,
 )
@@ -317,6 +318,7 @@ async def consent_submit(
 @router.get("/account", response_class=HTMLResponse)
 async def account_page(
     request: Request,
+    notice: Optional[str] = Query(default=None),
     user: User = Depends(require_session_user),
 ):
     sessions = await list_user_sessions(user.id)
@@ -326,8 +328,25 @@ async def account_page(
         {
             "user": user,
             "sessions": sessions,
+            "notice": notice,
         },
     )
+
+
+@router.post("/account/resend-verification")
+async def account_resend_verification(
+    request: Request,
+    csrf_token: Optional[str] = Form(default=None),
+    user: User = Depends(require_session_user),
+):
+    if not verify_csrf_token(request, csrf_token):
+        raise HTTPException(status_code=400, detail="Invalid CSRF token")
+
+    if not user.email_verified:
+        token = await create_email_verification_token(user.id)
+        await send_verification_email(user.email, token)
+
+    return RedirectResponse(url="/account?notice=verification_sent", status_code=status.HTTP_302_FOUND)
 
 
 @router.post("/account/logout")
@@ -427,3 +446,31 @@ async def reset_password_submit(
 async def verify_email_page(request: Request, token: str = Query(...)):
     success, msg = await verify_email_with_token(token)
     return _render_with_csrf(request, "verify_email.html", {"success": success, "message": msg})
+
+
+@router.get("/resend-verification", response_class=HTMLResponse)
+async def resend_verification_page(request: Request, email: Optional[str] = Query(default=None)):
+    return _render_with_csrf(request, "resend_verification.html", {"email": email or ""})
+
+
+@router.post("/resend-verification")
+async def resend_verification_submit(
+    request: Request,
+    email: str = Form(...),
+    csrf_token: Optional[str] = Form(default=None),
+):
+    if not verify_csrf_token(request, csrf_token):
+        return _render_with_csrf(request, "resend_verification.html", {"error": "Invalid CSRF token", "email": email}, 400)
+
+    success, token = await resend_email_verification(email)
+    if success and token:
+        await send_verification_email(email, token)
+
+    return _render_with_csrf(
+        request,
+        "resend_verification.html",
+        {
+            "success": "If an unverified account with that email exists, a new verification link has been sent.",
+            "email": email,
+        },
+    )

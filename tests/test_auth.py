@@ -146,3 +146,45 @@ async def test_session_expiration(client):
     # Request should be rejected as expired
     resp = await client.get("/api/auth/me", cookies={"veylor_session": session_cookie})
     assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_resend_verification_api(client):
+    """Test resending email verification link via API."""
+    from app.models.token_records import ActionToken
+
+    # Register user
+    reg = await client.post(
+        "/api/auth/register",
+        json={"email": "resend_test@veylor.dev", "password": "Password123!", "name": "Resend User"},
+    )
+    assert reg.status_code == 201
+    user_id = reg.json()["id"]
+
+    tokens_before = await ActionToken.find(
+        ActionToken.user_id == user_id,
+        ActionToken.token_type == "email_verification",
+    ).to_list()
+    assert len(tokens_before) == 1
+
+    # Request resend
+    resend_resp = await client.post(
+        "/api/auth/resend-verification",
+        json={"email": "resend_test@veylor.dev"},
+    )
+    assert resend_resp.status_code == 200
+    assert "verification link has been sent" in resend_resp.json()["message"]
+
+    tokens_after = await ActionToken.find(
+        ActionToken.user_id == user_id,
+        ActionToken.token_type == "email_verification",
+    ).to_list()
+    assert len(tokens_after) == 2
+
+    # Request resend for non-existent email should return same generic response (enumeration defense)
+    fake_resp = await client.post(
+        "/api/auth/resend-verification",
+        json={"email": "nonexistent_404@veylor.dev"},
+    )
+    assert fake_resp.status_code == 200
+    assert "verification link has been sent" in fake_resp.json()["message"]

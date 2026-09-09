@@ -138,3 +138,12 @@ async def verify_email_with_token(raw_token: str) -> Tuple[bool, str]:
     await action_token.save()
 
     return True, "Email has been successfully verified."
+
+
+async def resend_email_verification(email: str) -> Tuple[bool, Optional[str]]:
+    """Look up user by email and issue a new verification token if unverified."""
+    user = await get_user_by_email(email)
+    if not user or user.email_verified:
+        return False, None
+    token = await create_email_verification_token(user.id)
+    return True, token

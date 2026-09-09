@@ -58,3 +58,34 @@ async def test_account_list_and_revoke_sessions(client):
     # 3. Accessing /api/account should now be unauthorized
     unauth_resp = await client.get("/api/account", cookies={"veylor_session": cookie})
     assert unauth_resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_account_web_resend_verification(client):
+    """Test web-based resend verification from account portal."""
+    from app.security.csrf import generate_csrf_token
+
+    reg = await client.post(
+        "/api/auth/register",
+        json={"email": "web_resend@veylor.dev", "password": "Password123!", "name": "Web Resend"},
+    )
+    session_cookie = reg.cookies["veylor_session"]
+    csrf_token = generate_csrf_token()
+
+    # Post resend verification
+    resend_resp = await client.post(
+        "/account/resend-verification",
+        data={"csrf_token": csrf_token},
+        cookies={"veylor_session": session_cookie, "veylor_csrf": csrf_token},
+        follow_redirects=False,
+    )
+    assert resend_resp.status_code == 302
+    assert "notice=verification_sent" in resend_resp.headers["location"]
+
+    # Follow to account page and check notice render
+    account_resp = await client.get(
+        resend_resp.headers["location"],
+        cookies={"veylor_session": session_cookie},
+    )
+    assert account_resp.status_code == 200
+    assert "verification email has been sent" in account_resp.text

@@ -4,6 +4,12 @@
 
 {% block content %}
 <div class="w-full max-w-3xl bg-[#161616] border border-[#333333] p-8 space-y-8 my-6">
+    {% if notice == 'verification_sent' %}
+    <div class="p-3 bg-[#111c14] border border-[#1e5a2e] text-xs font-mono text-[#86efac] flex items-center justify-between">
+        <span>[DISPATCHED] A new verification email has been sent to {{ user.email }}. Please check your inbox.</span>
+    </div>
+    {% endif %}
+
     <!-- Top Identity Bar -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#2a2a2a] pb-6 gap-4">
         <div>
@@ -40,7 +46,15 @@
                     {% if user.email_verified %}
                     <span class="text-[10px] uppercase border border-[#333333] text-emerald-400 bg-[#111111] px-1.5 py-0.5">Verified</span>
                     {% else %}
-                    <span class="text-[10px] uppercase border border-[#443322] text-amber-400 bg-[#1a1510] px-1.5 py-0.5">Unverified</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] uppercase border border-[#443322] text-amber-400 bg-[#1a1510] px-1.5 py-0.5">Unverified</span>
+                        <form method="POST" action="/account/resend-verification" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <button type="submit" class="text-[10px] font-mono text-[#fafafa] bg-[#222222] hover:bg-[#333333] border border-[#444444] px-2 py-0.5 uppercase transition">
+                                Resend Email
+                            </button>
+                        </form>
+                    </div>
                     {% endif %}
                 </div>
             </div>

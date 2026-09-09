@@ -49,9 +49,10 @@ env:
     SIGNING_KEY_PATH: /app/keys/private_key.pem
     SIGNING_KEY_ID: veylor-sso-key-1
     CORS_ORIGINS: http://localhost:3000,http://localhost:8000,http://localhost:5173,https://sso.veylor.dev,https://egarageapp.uk,https://my.egarageapp.uk,https://api.veylor.dev,https://api.egarageapp.uk,https://velo.veylor.dev
-    SMTP_USE_TLS: true
-    SMTP_FROM_EMAIL: contact@egarageapp.uk
-    SMTP_FROM_NAME: "Veylor Identity"
+    SMTP_USE_TLS: false
+    SMTP_STARTTLS: true
+    SMTP_FROM_EMAIL: contact@veylor.dev
+    SMTP_FROM_NAME: "Veylor Systems"
   secret:
     - SECRET_KEY
     - ADMIN_API_KEY
