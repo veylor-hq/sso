@@ -188,3 +188,67 @@ async def test_resend_verification_api(client):
     )
     assert fake_resp.status_code == 200
     assert "verification link has been sent" in fake_resp.json()["message"]
+
+
+@pytest.mark.asyncio
+async def test_google_auth_flow(client):
+    """Test Google OAuth authentication and account linking flow."""
+    from unittest.mock import patch
+
+    mock_claims = {
+        "sub": "google_uid_987654",
+        "email": "google_user@veylor.dev",
+        "email_verified": True,
+        "name": "Google Tester",
+        "given_name": "Google",
+        "family_name": "Tester",
+        "picture": "https://lh3.googleusercontent.com/a/test",
+    }
+
+    # 1. New user registration via Google
+    with patch("app.api.web.verify_google_id_token", return_value=mock_claims):
+        resp = await client.post(
+            "/auth/google",
+            data={"credential": "mock_google_token_123", "return_to": "/account"},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 302
+        assert resp.headers["location"] == "/account"
+        assert "veylor_session" in resp.cookies
+
+        # Verify user created
+        user = await User.find_one(User.email == "google_user@veylor.dev")
+        assert user is not None
+        assert user.google_sub == "google_uid_987654"
+        assert user.auth_provider == "google"
+        assert user.email_verified is True
+        assert user.name == "Google Tester"
+
+    # 2. Existing user linking when logging in with Google
+    # First create a local user with password
+    reg = await client.post(
+        "/api/auth/register",
+        json={"email": "existing_local@veylor.dev", "password": "Password123!", "name": "Local Name"},
+    )
+    assert reg.status_code == 201
+
+    mock_existing_claims = {
+        "sub": "google_uid_112233",
+        "email": "existing_local@veylor.dev",
+        "email_verified": True,
+        "name": "Google Name",
+    }
+
+    with patch("app.api.web.verify_google_id_token", return_value=mock_existing_claims):
+        link_resp = await client.post(
+            "/auth/google",
+            data={"credential": "mock_google_token_456"},
+            follow_redirects=False,
+        )
+        assert link_resp.status_code == 302
+        assert "veylor_session" in link_resp.cookies
+
+        # Verify user was linked without overwriting primary ID
+        linked_user = await User.find_one(User.email == "existing_local@veylor.dev")
+        assert linked_user.google_sub == "google_uid_112233"
+        assert linked_user.email_verified is True

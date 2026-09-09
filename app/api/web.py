@@ -10,6 +10,7 @@ from app.config import get_settings
 from app.dependencies.auth import get_optional_user, require_session_user
 from app.models.user import User
 from app.security.csrf import CSRF_COOKIE_NAME, generate_csrf_token, verify_csrf_token
+from app.security.google import verify_google_id_token
 from app.security.rate_limit import get_client_ip
 from app.services.authentication import (
     authenticate_user,
@@ -27,7 +28,7 @@ from app.services.oauth import (
     validate_authorize_request,
 )
 from app.services.sessions import create_session, list_user_sessions, revoke_session
-from app.services.users import create_user
+from app.services.users import create_user, get_or_create_google_user
 
 router = APIRouter(include_in_schema=False)
 templates = Jinja2Templates(directory="app/templates")
@@ -139,6 +140,85 @@ async def login_submit(
     target_url = "/account"
     if return_to and return_to.startswith("/"):
         target_url = return_to
+
+    response = RedirectResponse(url=target_url, status_code=status.HTTP_302_FOUND)
+    _set_auth_cookie(response, raw_token)
+    return response
+
+
+@router.post("/auth/google")
+async def auth_google(
+    request: Request,
+    credential: Optional[str] = Form(default=None),
+    return_to: Optional[str] = Query(default=None),
+):
+    """Handle Google Identity Services authentication token."""
+    token = credential
+    ret = return_to
+
+    try:
+        form = await request.form()
+        token = token or form.get("credential")
+        ret = ret or form.get("return_to")
+    except Exception:
+        pass
+
+    if not token:
+        try:
+            body = await request.json()
+            token = body.get("credential") or body.get("id_token")
+            ret = ret or body.get("return_to")
+        except Exception:
+            pass
+
+    if not token:
+        return _render_with_csrf(
+            request,
+            "login.html",
+            {"error": "Missing Google authentication credential.", "return_to": ret or ""},
+            response_status=400,
+        )
+
+    claims = await verify_google_id_token(token)
+    if not claims or not claims.get("email"):
+        return _render_with_csrf(
+            request,
+            "login.html",
+            {"error": "Failed to verify Google identity. Please try again.", "return_to": ret or ""},
+            response_status=400,
+        )
+
+    email = claims["email"]
+    google_sub = str(claims.get("sub") or claims.get("user_id") or "")
+    name = claims.get("name") or email.split("@")[0]
+    given_name = claims.get("given_name")
+    family_name = claims.get("family_name")
+    avatar_url = claims.get("picture")
+
+    user = await get_or_create_google_user(
+        email=email,
+        google_sub=google_sub,
+        name=name,
+        given_name=given_name,
+        family_name=family_name,
+        avatar_url=avatar_url,
+    )
+
+    if user.disabled:
+        return _render_with_csrf(
+            request,
+            "login.html",
+            {"error": "This Veylor account has been disabled.", "return_to": ret or ""},
+            response_status=403,
+        )
+
+    ip = get_client_ip(request)
+    ua = request.headers.get("User-Agent")
+    _, raw_token = await create_session(user_id=user.id, ip_address=ip, user_agent=ua)
+
+    target_url = "/account"
+    if ret and ret.startswith("/"):
+        target_url = ret
 
     response = RedirectResponse(url=target_url, status_code=status.HTTP_302_FOUND)
     _set_auth_cookie(response, raw_token)

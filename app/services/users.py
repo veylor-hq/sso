@@ -84,3 +84,64 @@ async def update_user_profile(
     user.updated_at = datetime.now(timezone.utc)
     await user.save()
     return user
+
+
+async def get_or_create_google_user(
+    email: str,
+    google_sub: str,
+    name: str,
+    given_name: Optional[str] = None,
+    family_name: Optional[str] = None,
+    avatar_url: Optional[str] = None,
+) -> User:
+    """Find existing user by google_sub or email, or provision a new user."""
+    norm_email = email.strip().lower()
+
+    # 1. Search by google_sub
+    user = await User.find_one(User.google_sub == google_sub)
+    if not user:
+        # 2. Search by email
+        user = await get_user_by_email(norm_email)
+
+    now = datetime.now(timezone.utc)
+    if user:
+        if not user.google_sub:
+            user.google_sub = google_sub
+        user.email_verified = True
+        if not user.avatar_url and avatar_url:
+            user.avatar_url = avatar_url
+        user.last_login_at = now
+        user.updated_at = now
+        await user.save()
+        return user
+
+    # Create new Google user
+    if not given_name and " " in name:
+        parts = name.strip().split(" ", 1)
+        given_name = parts[0]
+        if not family_name and len(parts) > 1:
+            family_name = parts[1]
+
+    from app.security.random import generate_opaque_token
+    dummy_pw = generate_opaque_token(32)
+    pw_hash = hash_password(dummy_pw)
+
+    user_id = generate_opaque_id(prefix="usr")
+    user = User(
+        id=user_id,
+        email=norm_email,
+        email_verified=True,
+        password_hash=pw_hash,
+        name=name.strip() if name else norm_email.split("@")[0],
+        given_name=given_name.strip() if given_name else None,
+        family_name=family_name.strip() if family_name else None,
+        avatar_url=avatar_url,
+        google_sub=google_sub,
+        auth_provider="google",
+        disabled=False,
+        created_at=now,
+        updated_at=now,
+        last_login_at=now,
+    )
+    await user.insert()
+    return user

@@ -54,6 +54,12 @@ class Settings(BaseSettings):
     # Admin API
     ADMIN_API_KEY: str = Field(default="veylor_admin_secret_dev_change_me")
 
+    # Google OAuth2
+    GOOGLE_CLIENT_ID: str = Field(
+        default="555399944627-qptrrs4eq4j6qqmao5lgpt6r47vhnpd8.apps.googleusercontent.com"
+    )
+    GOOGLE_CLIENT_SECRET: Optional[str] = None
+
     # SMTP / Mailpit (dev defaults)
     SMTP_HOST: str = Field(default="localhost")
     SMTP_PORT: int = Field(default=1025)

@@ -78,7 +78,12 @@ async def seed_first_party_clients():
             "client_type": "public",
             "redirect_uris": [
                 "https://egarageapp.uk/auth/callback",
+                "https://my.egarageapp.uk/auth/callback",
+                "https://egarage.veylor.dev/auth/callback",
                 "http://localhost:3000/auth/callback",
+                "http://localhost:8000/auth/callback",
+                "http://localhost:5173/auth/callback",
+                "http://localhost:8080/auth/callback",
             ],
             "allowed_scopes": ["openid", "profile", "email"],
             "trusted": True,
@@ -102,7 +107,7 @@ async def seed_first_party_clients():
                 "https://pager.veylor.dev/auth/callback",
                 "http://localhost:3002/auth/callback",
             ],
-            "allowed_scopes": ["openid", "profile", "email", "pager:read", "pager:write"],
+            "allowed_scopes": ["openid", "profile", "email"],
             "trusted": True,
         },
         {
@@ -135,6 +140,16 @@ async def seed_first_party_clients():
             )
             await client.insert()
             logger.info("Seeded initial first-party OAuth client: %s", c["client_id"])
+        else:
+            updated = False
+            for uri in c["redirect_uris"]:
+                if uri not in exists.redirect_uris:
+                    exists.redirect_uris.append(uri)
+                    updated = True
+            if updated:
+                exists.updated_at = now
+                await exists.save()
+                logger.info("Merged updated redirect URIs for client: %s", c["client_id"])
 
 
 async def close_db():

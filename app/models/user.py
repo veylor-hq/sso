@@ -18,6 +18,8 @@ class User(Document):
     given_name: Optional[str] = Field(default=None, max_length=50)
     family_name: Optional[str] = Field(default=None, max_length=50)
     avatar_url: Optional[str] = Field(default=None)
+    google_sub: Optional[str] = Field(default=None)
+    auth_provider: str = Field(default="local")
     disabled: bool = Field(default=False)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

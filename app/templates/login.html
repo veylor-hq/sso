@@ -72,6 +72,35 @@ endblock %} {% block content %}
     </button>
   </form>
 
+  <div class="my-6 relative flex items-center justify-center">
+    <div class="border-t border-[#262626] w-full"></div>
+    <span class="bg-[#161616] px-3 text-[10px] font-mono text-[#71717a] uppercase tracking-widest absolute">
+      OR
+    </span>
+  </div>
+
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <div id="g_id_onload"
+       data-client_id="{{ settings.GOOGLE_CLIENT_ID }}"
+       data-context="signin"
+       data-ux_mode="popup"
+       data-login_uri="/auth/google{% if return_to %}?return_to={{ return_to|urlencode }}{% endif %}"
+       data-auto_prompt="false">
+  </div>
+
+  <div class="flex justify-center w-full">
+    <div class="g_id_signin w-full flex justify-center"
+         data-type="standard"
+         data-shape="rectangular"
+         data-theme="filled_black"
+         data-text="continue_with"
+         data-size="large"
+         data-logo_alignment="left"
+         data-width="384">
+    </div>
+  </div>
+
   <div
     class="mt-8 pt-6 border-t border-[#262626] flex items-center justify-between text-[11px] font-mono text-[#71717a] uppercase"
   >
