@@ -19,7 +19,7 @@ RUN pip install --upgrade pip setuptools wheel && \
     pip install \
     "fastapi>=0.115.0" \
     "uvicorn[standard]>=0.30.0" \
-    "beanie>=1.26.0" \
+    "beanie==2.0.1" \
     "motor>=3.6.0" \
     "pydantic>=2.8.0" \
     "pydantic-settings>=2.4.0" \
