@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Veylor Identity{% endblock %}</title>
+    <!-- IBM Plex Sans & IBM Plex Mono (Veylor Design System) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: [
+                '"IBM Plex Sans"',
+                "system-ui",
+                "-apple-system",
+                "sans-serif",
+              ],
+              mono: ['"IBM Plex Mono"', "monospace"],
+            },
+            colors: {
+              veylor: {
+                bg: "#111111",
+                card: "#161616",
+                cardAlt: "#1a1a1a",
+                border: "#333333",
+                borderLight: "#444444",
+                foreground: "#fafafa",
+                muted: "#a1a1aa",
+                subtle: "#71717a",
+                white: "#ffffff",
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      *,
+      *::before,
+      *::after {
+        border-radius: 0px !important; /* Strict defense-grade: no rounded corners anywhere */
+      }
+      body {
+        font-family:
+          "IBM Plex Sans",
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background-color: #111111;
+        color: #fafafa;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      .font-mono {
+        font-family: "IBM Plex Mono", monospace;
+      }
+      /* Custom scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #111111;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #333333;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #555555;
+      }
+      ::selection {
+        background: #fafafa;
+        color: #111111;
+      }
+      /* Inputs & forms */
+      input[type="text"],
+      input[type="email"],
+      input[type="password"] {
+        background-color: #111111;
+        border: 1px solid #333333;
+        color: #fafafa;
+        font-family: "IBM Plex Sans", sans-serif;
+        transition: border-color 0.15s ease;
+      }
+      input[type="text"]:focus,
+      input[type="email"]:focus,
+      input[type="password"]:focus {
+        border-color: #fafafa;
+        outline: none;
+        box-shadow: none;
+      }
+      /* Buttons */
+      .btn-veylor-primary {
+        background-color: #fafafa;
+        color: #111111;
+        border: 1px solid #fafafa;
+        font-family: "IBM Plex Sans", sans-serif;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .btn-veylor-primary:hover {
+        background-color: #e5e5e5;
+        border-color: #e5e5e5;
+      }
+      .btn-veylor-secondary {
+        background-color: transparent;
+        color: #fafafa;
+        border: 1px solid #333333;
+        font-family: "IBM Plex Sans", sans-serif;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .btn-veylor-secondary:hover {
+        background-color: #1a1a1a;
+        border-color: #666666;
+      }
+      .btn-veylor-danger {
+        background-color: transparent;
+        color: #ef4444;
+        border: 1px solid #552222;
+        font-family: "IBM Plex Sans", sans-serif;
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        transition: all 0.15s ease;
+      }
+      .btn-veylor-danger:hover {
+        background-color: #271313;
+        border-color: #991b1b;
+      }
+    </style>
+  </head>
+  <body
+    class="min-h-screen flex flex-col justify-between bg-[#111111] text-[#fafafa]"
+  >
+    <!-- Top Defense-Style Header -->
+    <header
+      class="border-b border-[#333333] bg-[#111111] px-6 py-3.5 sticky top-0 z-50"
+    >
+      <div class="max-w-5xl mx-auto flex items-center justify-between">
+        <a href="/" class="flex items-center space-x-3 group">
+          <div
+            class="h-7 w-7 border border-[#fafafa] bg-[#fafafa] flex items-center justify-center text-[#111111] font-bold text-xs tracking-tighter"
+          >
+            V
+          </div>
+          <div class="flex items-center space-x-2">
+            <span
+              class="text-sm font-semibold tracking-wider uppercase text-[#fafafa]"
+              >Veylor</span
+            >
+            <span
+              class="text-[10px] font-mono uppercase px-1.5 py-0.5 border border-[#444444] text-[#a1a1aa] bg-[#1a1a1a] tracking-widest"
+              >SSO</span
+            >
+          </div>
+        </a>
+        <div
+          class="flex items-center space-x-4 text-xs font-mono text-[#71717a] uppercase tracking-widest"
+        >
+          <span class="inline-flex items-center">
+            <span class="h-1.5 w-1.5 bg-[#52525b] mr-2"></span>
+            Central Auth
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Stage -->
+    <main class="flex-grow flex items-center justify-center p-4 sm:p-8">
+      {% block content %}{% endblock %}
+    </main>
+
+    <!-- Tactical Footer -->
+    <footer class="border-t border-[#222222] py-4 px-6 bg-[#0d0d0d]">
+      <div
+        class="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between text-[11px] font-mono text-[#52525b] uppercase tracking-wider gap-2"
+      >
+        <div>&copy; 2026 VEYLOR ECOSYSTEM</div>
+        <div class="flex space-x-4">
+          <span>OAUTH 2.0</span>
+          <span>OPENID CONNECT</span>
+          <span>PKCE S256</span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

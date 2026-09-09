@@ -1,0 +1,202 @@
+"""Authentication REST endpoints."""
+
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from pydantic import BaseModel, EmailStr, Field
+from app.config import get_settings
+from app.dependencies.auth import get_optional_session, require_session_user
+from app.dependencies.rate_limit import rate_limit_login
+from app.models.session import BrowserSession
+from app.models.user import User
+from app.security.rate_limit import get_client_ip
+from app.services.authentication import (
+    authenticate_user,
+    create_email_verification_token,
+    create_password_reset_token,
+    reset_password_with_token,
+    verify_email_with_token,
+)
+from app.services.email import send_password_reset_email, send_verification_email
+from app.services.sessions import create_session, revoke_session
+from app.services.users import create_user
+
+router = APIRouter(prefix="/api/auth", tags=["Authentication"])
+
+
+# Schemas
+class RegisterRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=8, max_length=128)
+    name: str = Field(..., min_length=1, max_length=100)
+    given_name: Optional[str] = None
+    family_name: Optional[str] = None
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+
+class VerifyEmailRequest(BaseModel):
+    token: str
+
+
+class UserResponse(BaseModel):
+    id: str
+    email: str
+    email_verified: bool
+    name: str
+    given_name: Optional[str] = None
+    family_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    created_at: str
+
+    @classmethod
+    def from_user(cls, user: User) -> "UserResponse":
+        return cls(
+            id=user.id,
+            email=user.email,
+            email_verified=user.email_verified,
+            name=user.name,
+            given_name=user.given_name,
+            family_name=user.family_name,
+            avatar_url=user.avatar_url,
+            created_at=user.created_at.isoformat(),
+        )
+
+
+def _set_session_cookie(response: Response, raw_token: str) -> None:
+    settings = get_settings()
+    response.set_cookie(
+        key=settings.SESSION_COOKIE_NAME,
+        value=raw_token,
+        max_age=settings.SESSION_TTL_SECONDS,
+        httponly=True,
+        secure=settings.SESSION_COOKIE_SECURE,
+        samesite=settings.SESSION_COOKIE_SAMESITE,
+        domain=settings.SESSION_COOKIE_DOMAIN,
+        path="/",
+    )
+
+
+def _clear_session_cookie(response: Response) -> None:
+    settings = get_settings()
+    response.delete_cookie(
+        key=settings.SESSION_COOKIE_NAME,
+        path="/",
+        domain=settings.SESSION_COOKIE_DOMAIN,
+        secure=settings.SESSION_COOKIE_SECURE,
+        httponly=True,
+        samesite=settings.SESSION_COOKIE_SAMESITE,
+    )
+
+
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def register(
+    payload: RegisterRequest,
+    request: Request,
+    response: Response,
+):
+    """Register a new Veylor account, establish a server session, and send verification email."""
+    try:
+        user = await create_user(
+            email=payload.email,
+            password=payload.password,
+            name=payload.name,
+            given_name=payload.given_name,
+            family_name=payload.family_name,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    # Create browser session for SSO
+    ip = get_client_ip(request)
+    ua = request.headers.get("User-Agent")
+    _, raw_token = await create_session(user_id=user.id, ip_address=ip, user_agent=ua)
+    _set_session_cookie(response, raw_token)
+
+    # Issue verification email
+    token = await create_email_verification_token(user.id)
+    await send_verification_email(user.email, token)
+
+    return UserResponse.from_user(user)
+
+
+@router.post("/login", response_model=UserResponse, dependencies=[Depends(rate_limit_login)])
+async def login(
+    payload: LoginRequest,
+    request: Request,
+    response: Response,
+):
+    """Authenticate user with email and password, creating a secure server-side session."""
+    user, err = await authenticate_user(payload.email, payload.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=err or "Invalid credentials",
+        )
+
+    ip = get_client_ip(request)
+    ua = request.headers.get("User-Agent")
+    _, raw_token = await create_session(user_id=user.id, ip_address=ip, user_agent=ua)
+    _set_session_cookie(response, raw_token)
+
+    return UserResponse.from_user(user)
+
+
+@router.post("/logout")
+async def logout(
+    response: Response,
+    session: Optional[BrowserSession] = Depends(get_optional_session),
+):
+    """Revoke active browser session and clear session cookie."""
+    if session:
+        await revoke_session(session.id)
+    _clear_session_cookie(response)
+    return {"message": "Successfully logged out"}
+
+
+@router.get("/me", response_model=UserResponse)
+async def get_me(user: User = Depends(require_session_user)):
+    """Return currently authenticated user profile."""
+    return UserResponse.from_user(user)
+
+
+@router.post("/forgot-password")
+async def forgot_password(payload: ForgotPasswordRequest):
+    """Initiate password reset.
+
+    Always returns a generic success message to prevent user enumeration attacks.
+    """
+    res = await create_password_reset_token(payload.email)
+    if res:
+        user, token = res
+        await send_password_reset_email(user.email, token)
+    return {"message": "If an account with that email exists, password reset instructions have been sent."}
+
+
+@router.post("/reset-password")
+async def reset_password(payload: ResetPasswordRequest):
+    """Reset password using received token."""
+    success, msg = await reset_password_with_token(payload.token, payload.new_password)
+    if not success:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=msg)
+    return {"message": msg}
+
+
+@router.post("/verify-email")
+async def verify_email(payload: VerifyEmailRequest):
+    """Confirm email address with token."""
+    success, msg = await verify_email_with_token(payload.token)
+    if not success:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=msg)
+    return {"message": msg}

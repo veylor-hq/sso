@@ -1,0 +1,78 @@
+services:
+  sso:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: veylor-sso
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - SSO_ENV=development
+      - SSO_ISSUER=http://localhost:8000
+      - SECRET_KEY=veylor_dev_secret_change_in_production_32_chars_min!
+      - MONGODB_URL=mongodb://mongodb:27017
+      - MONGODB_DATABASE=veylor_sso
+      - REDIS_URL=redis://redis:6379/0
+      - SESSION_COOKIE_NAME=veylor_session
+      - SESSION_TTL_SECONDS=2592000
+      - SESSION_COOKIE_SECURE=false
+      - SESSION_COOKIE_SAMESITE=lax
+      - ACCESS_TOKEN_TTL_SECONDS=3600
+      - AUTHORIZATION_CODE_TTL_SECONDS=60
+      - SIGNING_KEY_PATH=/app/keys/private_key.pem
+      - SIGNING_KEY_ID=veylor-sso-key-1
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:8000,https://sso.veylor.dev,https://egarageapp.uk
+      - ADMIN_API_KEY=veylor_admin_secret_dev_change_me
+      - SMTP_HOST=mailpit
+      - SMTP_PORT=1025
+      - SMTP_FROM_EMAIL=no-reply@veylor.dev
+      - SMTP_FROM_NAME=Veylor Identity
+    volumes:
+      - sso_keys:/app/keys
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      mailpit:
+        condition: service_started
+
+  mongodb:
+    image: mongo:7.0
+    container_name: veylor-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  redis:
+    image: redis:7-alpine
+    container_name: veylor-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: veylor-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025" # SMTP port
+      - "8025:8025" # Web UI
+    environment:
+      MP_MAX_MESSAGES: 500
+
+volumes:
+  mongodb_data:
+  redis_data:
+  sso_keys:

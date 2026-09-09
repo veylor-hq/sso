@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Account Identity - Veylor SSO{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-3xl bg-[#161616] border border-[#333333] p-8 space-y-8 my-6">
+    <!-- Top Identity Bar -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#2a2a2a] pb-6 gap-4">
+        <div>
+            <div class="inline-flex items-center gap-2 border border-[#333333] bg-[#1a1a1a] px-2.5 py-1 text-[11px] font-mono text-[#a1a1aa] uppercase tracking-widest mb-2">
+                <span class="h-1.5 w-1.5 bg-emerald-500"></span>
+                Authenticated Session
+            </div>
+            <h1 class="text-xl font-bold tracking-tight text-[#fafafa] uppercase">Veylor Identity Account</h1>
+            <p class="text-xs font-mono text-[#a1a1aa] mt-0.5">Active Central Single Sign-On Context</p>
+        </div>
+        <form method="POST" action="/account/logout">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit"
+                    class="btn-veylor-secondary py-2 px-4 text-xs">
+                Terminate Session
+            </button>
+        </form>
+    </div>
+
+    <!-- Identity Credentials Data Grid -->
+    <div class="bg-[#111111] border border-[#2a2a2a] p-6">
+        <div class="text-[11px] font-mono text-[#71717a] uppercase tracking-widest mb-4 border-b border-[#222222] pb-2">
+            Core Identity Claims
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs font-mono">
+            <div>
+                <p class="text-[#71717a] uppercase tracking-wider">Immutable Subject ID (sub)</p>
+                <p class="text-[#fafafa] font-semibold mt-1 bg-[#161616] p-2 border border-[#2a2a2a]">{{ user.id }}</p>
+            </div>
+            <div>
+                <p class="text-[#71717a] uppercase tracking-wider">Primary Email</p>
+                <div class="flex items-center justify-between mt-1 bg-[#161616] p-2 border border-[#2a2a2a]">
+                    <span class="text-[#fafafa]">{{ user.email }}</span>
+                    {% if user.email_verified %}
+                    <span class="text-[10px] uppercase border border-[#333333] text-emerald-400 bg-[#111111] px-1.5 py-0.5">Verified</span>
+                    {% else %}
+                    <span class="text-[10px] uppercase border border-[#443322] text-amber-400 bg-[#1a1510] px-1.5 py-0.5">Unverified</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div>
+                <p class="text-[#71717a] uppercase tracking-wider">Display Name</p>
+                <p class="text-[#fafafa] mt-1 bg-[#161616] p-2 border border-[#2a2a2a]">{{ user.name }}</p>
+            </div>
+            <div>
+                <p class="text-[#71717a] uppercase tracking-wider">Account Initialized</p>
+                <p class="text-[#a1a1aa] mt-1 bg-[#161616] p-2 border border-[#2a2a2a]">{{ user.created_at.strftime("%Y-%m-%d %H:%M UTC") }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Single Sign-On Sessions -->
+    <div class="space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-sm font-bold uppercase tracking-wider text-[#fafafa]">Active Single Sign-On Sessions</h2>
+                <p class="text-xs font-mono text-[#71717a] mt-0.5">Grants passwordless access to registered Veylor ecosystem applications.</p>
+            </div>
+            <span class="text-xs font-mono text-[#a1a1aa] bg-[#1a1a1a] border border-[#333333] px-2 py-0.5 uppercase">
+                Count: {{ sessions|length }}
+            </span>
+        </div>
+
+        <div class="space-y-2">
+            {% for s in sessions %}
+            <div class="bg-[#111111] border border-[#2a2a2a] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="space-y-1 font-mono text-xs">
+                    <div class="flex items-center space-x-2">
+                        <span class="h-1.5 w-1.5 bg-emerald-500"></span>
+                        <span class="font-semibold text-[#fafafa]">{{ s.user_agent or "Veylor Client Device" }}</span>
+                    </div>
+                    <p class="text-[#71717a] text-[11px]">
+                        IP: <span class="text-[#a1a1aa]">{{ s.ip_address or "127.0.0.1" }}</span> &bull;
+                        LAST ACTIVITY: <span class="text-[#a1a1aa]">{{ s.last_seen_at.strftime("%H:%M:%S UTC") }}</span> &bull;
+                        REF: <span class="text-[#52525b]">{{ s.id }}</span>
+                    </p>
+                </div>
+
+                <form method="POST" action="/account/sessions/{{ s.id }}/revoke">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit"
+                            class="btn-veylor-danger px-3 py-1.5">
+                        Revoke
+                    </button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

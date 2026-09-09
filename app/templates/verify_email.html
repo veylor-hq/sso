@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Email Verification - Veylor SSO{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-md bg-[#161616] border border-[#333333] p-8 text-center">
+    <div class="mb-6">
+        {% if success %}
+        <div class="inline-flex items-center gap-2 border border-[#1e5a2e] bg-[#111c14] px-3 py-1 text-xs font-mono text-[#86efac] uppercase tracking-widest mb-4">
+            <span class="h-1.5 w-1.5 bg-emerald-400"></span>
+            Status Verified
+        </div>
+        <h1 class="text-xl font-bold tracking-tight text-[#fafafa] uppercase">Email Verification Complete</h1>
+        <p class="text-xs font-mono text-[#a1a1aa] mt-2">{{ message }}</p>
+        {% else %}
+        <div class="inline-flex items-center gap-2 border border-[#7f1d1d] bg-[#1c1111] px-3 py-1 text-xs font-mono text-[#fca5a5] uppercase tracking-widest mb-4">
+            <span class="h-1.5 w-1.5 bg-red-400"></span>
+            Verification Failed
+        </div>
+        <h1 class="text-xl font-bold tracking-tight text-[#fafafa] uppercase">Token Invalid or Expired</h1>
+        <p class="text-xs font-mono text-[#fca5a5] mt-2">{{ message }}</p>
+        {% endif %}
+    </div>
+
+    <div class="mt-8">
+        <a href="/login" class="btn-veylor-primary w-full py-3 px-4 text-xs">
+            Proceed to Authentication &rarr;
+        </a>
+    </div>
+</div>
+{% endblock %}

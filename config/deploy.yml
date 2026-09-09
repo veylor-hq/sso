@@ -1,0 +1,61 @@
+# config/deploy.yml
+service: veylor-sso
+image: veylor-hq/sso/veylor-sso
+
+servers:
+  web:
+    - <%= ENV["TARGET_SERVER_IP"] || "178.104.132.198" %>
+
+registry:
+  server: ghcr.io
+  username: denver-code
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+ssh:
+  user: kamal
+  keys:
+    - ~/.ssh/kamal_ci_key
+
+builder:
+  arch: amd64
+
+volumes:
+  - "/var/lib/velo/sso_keys:/app/keys"
+
+proxy:
+  ssl: true
+  hosts:
+    - sso.veylor.dev
+  app_port: 8000
+  healthcheck:
+    path: /health
+    interval: 5
+
+env:
+  clear:
+    TZ: Europe/London
+    SSO_ENV: production
+    SSO_ISSUER: https://sso.veylor.dev
+    MONGODB_URL: mongodb://velo-api-mongo:27017
+    MONGODB_DATABASE: veylor_sso
+    REDIS_URL: redis://velo-api-redis:6379/1
+    SESSION_COOKIE_NAME: veylor_session
+    SESSION_COOKIE_SECURE: true
+    SESSION_COOKIE_SAMESITE: lax
+    SESSION_COOKIE_DOMAIN: .veylor.dev
+    ACCESS_TOKEN_TTL_SECONDS: 3600
+    AUTHORIZATION_CODE_TTL_SECONDS: 60
+    SIGNING_KEY_PATH: /app/keys/private_key.pem
+    SIGNING_KEY_ID: veylor-sso-key-1
+    CORS_ORIGINS: http://localhost:3000,http://localhost:8000,http://localhost:5173,https://sso.veylor.dev,https://egarageapp.uk,https://my.egarageapp.uk,https://api.veylor.dev,https://api.egarageapp.uk,https://velo.veylor.dev
+    SMTP_USE_TLS: true
+    SMTP_FROM_EMAIL: contact@egarageapp.uk
+    SMTP_FROM_NAME: "Veylor Identity"
+  secret:
+    - SECRET_KEY
+    - ADMIN_API_KEY
+    - SMTP_HOST
+    - SMTP_PORT
+    - SMTP_USERNAME
+    - SMTP_PASSWORD
