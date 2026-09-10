@@ -17,6 +17,10 @@ class OAuthClient(Document):
         default=["openid", "profile", "email"],
         description="Allowed scopes for this client",
     )
+    allowed_origins: List[str] = Field(
+        default_factory=list,
+        description="Allowed web origins permitted to use SSO for this client",
+    )
     # If trusted=True, skip interactive consent screen for standard scopes
     trusted: bool = Field(default=False, description="First-party trusted application")
     disabled: bool = Field(default=False)

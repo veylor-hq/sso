@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta, timezone
 import re
 from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, EmailStr, Field
 from app.dependencies.auth import require_admin_user
 from app.models.oauth_client import OAuthClient
@@ -110,6 +110,9 @@ class SyncGoogleUserRequest(BaseModel):
     given_name: Optional[str] = None
     family_name: Optional[str] = None
     avatar_url: Optional[str] = None
+    client_id: Optional[str] = None
+    app: Optional[str] = None
+    authorized_apps: Optional[List[str]] = None
 
 
 class UserAdminOut(BaseModel):
@@ -458,8 +461,27 @@ async def delete_user(user_id: str):
 
 
 @router.post("/users/sync-google", response_model=UserAdminOut)
-async def sync_google_user(payload: SyncGoogleUserRequest):
+async def sync_google_user(request: Request, payload: SyncGoogleUserRequest):
     """Sync or provision a verified Google OAuth user via server-to-server integration."""
+    target_client_id = (
+        request.headers.get("x-client-id")
+        or payload.client_id
+        or payload.app
+    )
+    assigned_app = None
+    if target_client_id:
+        client = await OAuthClient.find_one(
+            OAuthClient.client_id == target_client_id.strip().lower(),
+            OAuthClient.disabled == False,
+        )
+        if client:
+            assigned_app = client.client_id
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Service '{target_client_id}' is not registered with Veylor SSO.",
+            )
+
     try:
         user = await get_or_create_google_user(
             email=payload.email,
@@ -468,6 +490,8 @@ async def sync_google_user(payload: SyncGoogleUserRequest):
             given_name=payload.given_name,
             family_name=payload.family_name,
             avatar_url=payload.avatar_url,
+            authorized_apps=payload.authorized_apps,
+            app=assigned_app,
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -476,13 +500,27 @@ async def sync_google_user(payload: SyncGoogleUserRequest):
 
 
 @router.post("/users/{user_id}/reset-password")
-async def reset_user_password(user_id: str, payload: ResetUserPasswordRequest):
+async def reset_user_password(
+    request: Request,
+    user_id: str,
+    payload: ResetUserPasswordRequest,
+):
     """Set a new password directly or dispatch a reset link email.
     
     Supports user_id as an SSO user ID (usr_...) or an email address.
     If the user does not exist yet in SSO and new_password is provided with an email,
     automatically provisions the user in SSO so accounts stay synchronized.
     """
+    target_client_id = request.headers.get("x-client-id") or request.query_params.get("client_id")
+    assigned_app = None
+    if target_client_id:
+        client = await OAuthClient.find_one(
+            OAuthClient.client_id == target_client_id.strip().lower(),
+            OAuthClient.disabled == False,
+        )
+        if client:
+            assigned_app = client.client_id
+
     user = None
     if user_id.startswith("usr_"):
         user = await User.find_one(User.id == user_id)
@@ -498,6 +536,7 @@ async def reset_user_password(user_id: str, payload: ResetUserPasswordRequest):
                 name=clean_email.split("@")[0],
                 email_verified=True,
                 auth_provider="local",
+                app=assigned_app,
             )
             return {
                 "message": f"User created and password set for {user.email}",

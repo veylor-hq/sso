@@ -30,6 +30,7 @@ from app.services.oauth import (
 )
 from app.services.sessions import create_session, list_user_sessions, revoke_session
 from app.services.users import create_user, get_or_create_google_user
+from app.services.client_registry import resolve_and_verify_service_from_request
 
 router = APIRouter(include_in_schema=False)
 templates = Jinja2Templates(directory="app/templates")
@@ -152,6 +153,18 @@ async def login_submit(
             response_status=401,
         )
 
+    # Determine calling service from SSO registry and associate with user if present
+    client = await resolve_and_verify_service_from_request(
+        request=request,
+        return_to=return_to,
+    )
+    if client and user:
+        if user.authorized_apps is None:
+            user.authorized_apps = []
+        if client.client_id not in user.authorized_apps:
+            user.authorized_apps.append(client.client_id)
+            await user.save()
+
     ip = get_client_ip(request)
     ua = request.headers.get("User-Agent")
     _, raw_token = await create_session(user_id=user.id, ip_address=ip, user_agent=ua)
@@ -212,6 +225,13 @@ async def auth_google(
     family_name = claims.get("family_name")
     avatar_url = claims.get("picture")
 
+    # Enforce origin security and resolve service name-id from SSO database
+    client = await resolve_and_verify_service_from_request(
+        request=request,
+        return_to=ret,
+    )
+    assigned_app = client.client_id if client else None
+
     user = await get_or_create_google_user(
         email=email,
         google_sub=google_sub,
@@ -219,6 +239,7 @@ async def auth_google(
         given_name=given_name,
         family_name=family_name,
         avatar_url=avatar_url,
+        app=assigned_app,
     )
 
     if user.disabled:
@@ -282,11 +303,19 @@ async def register_submit(
             response_status=400,
         )
 
+    # Enforce origin security and resolve service name-id from SSO database
+    client = await resolve_and_verify_service_from_request(
+        request=request,
+        return_to=return_to,
+    )
+    assigned_app = client.client_id if client else None
+
     try:
         user = await create_user(
             email=email,
             password=password,
             name=name,
+            app=assigned_app,
         )
     except ValueError as e:
         return _render_with_csrf(

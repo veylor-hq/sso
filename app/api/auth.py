@@ -1,6 +1,6 @@
 """Authentication REST endpoints."""
 
-from typing import Optional
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, EmailStr, Field
 from app.config import get_settings
@@ -25,6 +25,7 @@ from app.security.google import verify_google_id_token, verify_google_access_tok
 from app.services.email import send_password_reset_email, send_verification_email
 from app.services.sessions import create_session, revoke_session
 from app.services.users import create_user, get_or_create_google_user
+from app.services.client_registry import resolve_and_verify_service_from_request
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
@@ -36,11 +37,15 @@ class RegisterRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     given_name: Optional[str] = None
     family_name: Optional[str] = None
+    client_id: Optional[str] = None
+    app: Optional[str] = None
+    authorized_apps: Optional[List[str]] = None
 
 
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+    client_id: Optional[str] = None
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -117,6 +122,13 @@ async def register(
     response: Response,
 ):
     """Register a new Veylor account, establish a server session, and send verification email."""
+    # Enforce origin security and resolve service name-id from SSO database
+    client = await resolve_and_verify_service_from_request(
+        request=request,
+        client_id_hint=payload.client_id or payload.app,
+    )
+    assigned_app = client.client_id if client else None
+
     try:
         user = await create_user(
             email=payload.email,
@@ -124,6 +136,8 @@ async def register(
             name=payload.name,
             given_name=payload.given_name,
             family_name=payload.family_name,
+            authorized_apps=payload.authorized_apps,
+            app=assigned_app,
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -148,12 +162,26 @@ async def login(
     response: Response,
 ):
     """Authenticate user with email and password, creating a secure server-side session."""
+    # Enforce origin security and resolve service name-id from SSO database
+    client = await resolve_and_verify_service_from_request(
+        request=request,
+        client_id_hint=payload.client_id,
+    )
+
     user, err = await authenticate_user(payload.email, payload.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=err or "Invalid credentials",
         )
+
+    # If login originates from a verified service, ensure service is in authorized_apps
+    if client:
+        if user.authorized_apps is None:
+            user.authorized_apps = []
+        if client.client_id not in user.authorized_apps:
+            user.authorized_apps.append(client.client_id)
+            await user.save()
 
     ip = get_client_ip(request)
     ua = request.headers.get("User-Agent")
@@ -227,6 +255,9 @@ async def resend_verification(payload: ResendVerificationRequest):
 class GoogleLoginRequest(BaseModel):
     id_token: Optional[str] = None
     access_token: Optional[str] = None
+    client_id: Optional[str] = None
+    app: Optional[str] = None
+    authorized_apps: Optional[List[str]] = None
 
 
 @router.post("/google", response_model=UserResponse, dependencies=[Depends(rate_limit_login)])
@@ -241,6 +272,13 @@ async def login_google(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Either id_token or access_token must be provided",
         )
+
+    # Enforce origin security and resolve service name-id from SSO database
+    client = await resolve_and_verify_service_from_request(
+        request=request,
+        client_id_hint=payload.client_id or payload.app,
+    )
+    assigned_app = client.client_id if client else None
 
     google_payload = None
     if payload.id_token:
@@ -265,6 +303,8 @@ async def login_google(
             google_sub=google_sub,
             name=name,
             avatar_url=picture,
+            authorized_apps=payload.authorized_apps,
+            app=assigned_app,
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

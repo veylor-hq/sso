@@ -85,6 +85,15 @@ async def seed_first_party_clients():
                 "http://localhost:5173/auth/callback",
                 "http://localhost:8080/auth/callback",
             ],
+            "allowed_origins": [
+                "https://egarageapp.uk",
+                "https://my.egarageapp.uk",
+                "https://egarage.veylor.dev",
+                "http://localhost:3000",
+                "http://localhost:8000",
+                "http://localhost:5173",
+                "http://localhost:8080",
+            ],
             "allowed_scopes": ["openid", "profile", "email"],
             "trusted": True,
         },
@@ -95,6 +104,10 @@ async def seed_first_party_clients():
             "redirect_uris": [
                 "https://relay.veylor.dev/auth/callback",
                 "http://localhost:3001/auth/callback",
+            ],
+            "allowed_origins": [
+                "https://relay.veylor.dev",
+                "http://localhost:3001",
             ],
             "allowed_scopes": ["openid", "profile", "email", "relay:send", "relay:read"],
             "trusted": True,
@@ -107,6 +120,10 @@ async def seed_first_party_clients():
                 "https://pager.veylor.dev/auth/callback",
                 "http://localhost:3002/auth/callback",
             ],
+            "allowed_origins": [
+                "https://pager.veylor.dev",
+                "http://localhost:3002",
+            ],
             "allowed_scopes": ["openid", "profile", "email"],
             "trusted": True,
         },
@@ -117,6 +134,10 @@ async def seed_first_party_clients():
             "redirect_uris": [
                 "https://warden.veylor.dev/auth/callback",
                 "http://localhost:3003/auth/callback",
+            ],
+            "allowed_origins": [
+                "https://warden.veylor.dev",
+                "http://localhost:3003",
             ],
             "allowed_scopes": ["openid", "profile", "email"],
             "trusted": True,
@@ -132,6 +153,7 @@ async def seed_first_party_clients():
                 client_name=c["client_name"],
                 client_type=c["client_type"],
                 redirect_uris=c["redirect_uris"],
+                allowed_origins=c["allowed_origins"],
                 allowed_scopes=c["allowed_scopes"],
                 trusted=c["trusted"],
                 disabled=False,
@@ -146,10 +168,20 @@ async def seed_first_party_clients():
                 if uri not in exists.redirect_uris:
                     exists.redirect_uris.append(uri)
                     updated = True
+            if hasattr(exists, "allowed_origins"):
+                if exists.allowed_origins is None:
+                    exists.allowed_origins = []
+                for origin in c.get("allowed_origins", []):
+                    if origin not in exists.allowed_origins:
+                        exists.allowed_origins.append(origin)
+                        updated = True
+            else:
+                exists.allowed_origins = c.get("allowed_origins", [])
+                updated = True
             if updated:
                 exists.updated_at = now
                 await exists.save()
-                logger.info("Merged updated redirect URIs for client: %s", c["client_id"])
+                logger.info("Merged updated redirect URIs and origins for client: %s", c["client_id"])
 
 
 async def close_db():

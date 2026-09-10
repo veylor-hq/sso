@@ -29,6 +29,7 @@ async def validate_authorize_request(
     scope: str,
     code_challenge: Optional[str],
     code_challenge_method: Optional[str],
+    request: Optional[object] = None,
 ) -> Tuple[OAuthClient, List[str]]:
     """Validate incoming /authorize parameters strictly according to OAuth 2.0 & OIDC specs."""
     # 1. Validate response_type
@@ -46,7 +47,25 @@ async def validate_authorize_request(
     if not client or client.disabled:
         raise OAuthError("unauthorized_client", f"Client '{client_id}' is unknown or disabled.")
 
-    # 3. Exact redirect_uri matching
+    # 3. Verify origin if request is passed and origin/referer present
+    if request and hasattr(request, "headers"):
+        from app.services.client_registry import (
+            normalize_origin,
+            get_client_allowed_origins,
+            is_sso_internal_origin,
+        )
+        raw_orig = request.headers.get("origin") or request.headers.get("referer")
+        req_origin = normalize_origin(raw_orig)
+        if req_origin and not is_sso_internal_origin(req_origin):
+            allowed = get_client_allowed_origins(client)
+            if req_origin not in allowed:
+                raise OAuthError(
+                    "unauthorized_client",
+                    f"Website '{req_origin}' is not permitted to use service '{client.client_id}'.",
+                    status_code=403,
+                )
+
+    # 4. Exact redirect_uri matching
     if not redirect_uri:
         raise OAuthError("invalid_request", "Missing redirect_uri parameter.")
 

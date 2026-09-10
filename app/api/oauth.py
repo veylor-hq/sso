@@ -94,6 +94,7 @@ async def authorize(
             scope=scope,
             code_challenge=code_challenge,
             code_challenge_method=code_challenge_method,
+            request=request,
         )
     except OAuthError as e:
         # If redirect_uri is invalid or client is unknown, we MUST NOT redirect (per RFC 6749 Section 4.1.2.1)
@@ -107,6 +108,12 @@ async def authorize(
         return RedirectResponse(url=f"/login?return_to={encoded_return}", status_code=status.HTTP_302_FOUND)
 
     # User is authenticated!
+    if user.authorized_apps is None:
+        user.authorized_apps = []
+    if client.client_id.lower() not in user.authorized_apps:
+        user.authorized_apps.append(client.client_id.lower())
+        await user.save()
+
     # Check if first-party trusted client
     if client.trusted:
         # First-party trusted client (e.g. eGarage, Relay, Pager, Warden)
@@ -187,6 +194,12 @@ async def token(
                 "error_description": "User account associated with authorization code is invalid or disabled.",
             },
         )
+
+    if user.authorized_apps is None:
+        user.authorized_apps = []
+    if auth_code.client_id.lower() not in user.authorized_apps:
+        user.authorized_apps.append(auth_code.client_id.lower())
+        await user.save()
 
     token_data = generate_tokens_for_authorization(auth_code=auth_code, user=user)
     return JSONResponse(

@@ -23,6 +23,10 @@ async def create_user(
     name: str,
     given_name: Optional[str] = None,
     family_name: Optional[str] = None,
+    email_verified: bool = False,
+    auth_provider: str = "local",
+    authorized_apps: Optional[list] = None,
+    app: Optional[str] = None,
 ) -> User:
     """Create a new Veylor account with an immutable opaque ID."""
     norm_email = email.strip().lower()
@@ -43,6 +47,13 @@ async def create_user(
         if not family_name and len(parts) > 1:
             family_name = parts[1]
 
+    # Apps / projects assignment
+    apps: list = []
+    if authorized_apps:
+        apps.extend([str(a).strip().lower() for a in authorized_apps if str(a).strip()])
+    if app and app.strip().lower() not in apps:
+        apps.append(app.strip().lower())
+
     # Generate immutable opaque ID: usr_01J...
     user_id = generate_opaque_id(prefix="usr")
     pw_hash = hash_password(password)
@@ -51,11 +62,13 @@ async def create_user(
     user = User(
         id=user_id,
         email=norm_email,
-        email_verified=False,
+        email_verified=email_verified,
         password_hash=pw_hash,
         name=name.strip(),
         given_name=given_name.strip() if given_name else None,
         family_name=family_name.strip() if family_name else None,
+        auth_provider=auth_provider,
+        authorized_apps=apps,
         disabled=False,
         created_at=now,
         updated_at=now,
@@ -93,9 +106,17 @@ async def get_or_create_google_user(
     given_name: Optional[str] = None,
     family_name: Optional[str] = None,
     avatar_url: Optional[str] = None,
+    authorized_apps: Optional[list] = None,
+    app: Optional[str] = None,
 ) -> User:
     """Find existing user by google_sub or email, or provision a new user."""
     norm_email = email.strip().lower()
+
+    apps_to_add: list = []
+    if authorized_apps:
+        apps_to_add.extend([str(a).strip().lower() for a in authorized_apps if str(a).strip()])
+    if app and app.strip().lower() not in apps_to_add:
+        apps_to_add.append(app.strip().lower())
 
     # 1. Search by google_sub
     user = await User.find_one(User.google_sub == google_sub)
@@ -112,6 +133,11 @@ async def get_or_create_google_user(
         user.email_verified = True
         if not user.avatar_url and avatar_url:
             user.avatar_url = avatar_url
+        if user.authorized_apps is None:
+            user.authorized_apps = []
+        for a in apps_to_add:
+            if a not in user.authorized_apps:
+                user.authorized_apps.append(a)
         user.last_login_at = now
         user.updated_at = now
         await user.save()
@@ -140,6 +166,7 @@ async def get_or_create_google_user(
         avatar_url=avatar_url,
         google_sub=google_sub,
         auth_provider="google",
+        authorized_apps=apps_to_add,
         disabled=False,
         created_at=now,
         updated_at=now,

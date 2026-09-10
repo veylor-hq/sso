@@ -186,3 +186,81 @@ async def test_terms_and_privacy_pages_accessible(client):
     assert "UK GDPR" in privacy_resp.text
     assert "Data Controller" in privacy_resp.text
 
+
+@pytest.mark.asyncio
+async def test_unauthorized_extra_website_blocked(client):
+    """Ensure requests originating from unregistered extra websites are rejected with 403."""
+    payload = {
+        "email": "intruder@evil.com",
+        "password": "EvilPassword123!",
+        "name": "Intruder",
+    }
+    resp = await client.post(
+        "/api/auth/register",
+        json=payload,
+        headers={"Origin": "https://unauthorized-evil-website.com"},
+    )
+    assert resp.status_code == 403
+    assert "not permitted to use Veylor SSO" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_extra_website_spoofing_client_id_blocked(client):
+    """Ensure extra websites cannot forge X-Client-Id of another permitted service."""
+    payload = {
+        "email": "spoofed@evil.com",
+        "password": "SpoofedPassword123!",
+        "name": "Spoofer",
+    }
+    resp = await client.post(
+        "/api/auth/register",
+        json=payload,
+        headers={
+            "Origin": "https://unauthorized-evil-website.com",
+            "X-Client-Id": "egarage",
+        },
+    )
+    assert resp.status_code == 403
+    assert "not permitted to use service 'egarage'" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_authorized_website_resolves_service_name_id(client):
+    """Ensure requests from permitted website origins automatically resolve service name-id from SSO."""
+    from app.services.users import get_user_by_email
+    payload = {
+        "email": "legit_mechanic@egarage.uk",
+        "password": "ValidPassword123!",
+        "name": "Legit Mechanic",
+    }
+    resp = await client.post(
+        "/api/auth/register",
+        json=payload,
+        headers={"Origin": "https://egarageapp.uk"},
+    )
+    assert resp.status_code == 201
+    user = await get_user_by_email("legit_mechanic@egarage.uk")
+    assert user is not None
+    assert "egarage" in user.authorized_apps
+
+
+@pytest.mark.asyncio
+async def test_backend_x_client_id_resolves_service(client):
+    """Ensure server-to-server calls with valid X-Client-Id are verified and assigned."""
+    from app.services.users import get_user_by_email
+    payload = {
+        "email": "backend_signup@egarage.uk",
+        "password": "ValidPassword123!",
+        "name": "Backend Mechanic",
+    }
+    resp = await client.post(
+        "/api/auth/register",
+        json=payload,
+        headers={"X-Client-Id": "egarage"},
+    )
+    assert resp.status_code == 201
+    user = await get_user_by_email("backend_signup@egarage.uk")
+    assert user is not None
+    assert "egarage" in user.authorized_apps
+
+
