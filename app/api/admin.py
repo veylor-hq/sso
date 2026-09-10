@@ -13,6 +13,7 @@ from app.security.passwords import hash_password
 from app.security.random import generate_opaque_id, generate_opaque_token, hash_token
 from app.services.authentication import create_password_reset_token
 from app.services.email import send_password_reset_email
+from app.services.users import create_user, get_or_create_google_user
 
 router = APIRouter(
     prefix="/api/admin",
@@ -100,6 +101,15 @@ class UpdateUserRequest(BaseModel):
 class ResetUserPasswordRequest(BaseModel):
     new_password: Optional[str] = Field(default=None, min_length=8, max_length=128)
     send_reset_email: bool = Field(default=False)
+
+
+class SyncGoogleUserRequest(BaseModel):
+    email: EmailStr
+    google_sub: str
+    name: str
+    given_name: Optional[str] = None
+    family_name: Optional[str] = None
+    avatar_url: Optional[str] = None
 
 
 class UserAdminOut(BaseModel):
@@ -447,11 +457,52 @@ async def delete_user(user_id: str):
     return {"message": f"User '{user_id}' ({user.email}) successfully deleted"}
 
 
+@router.post("/users/sync-google", response_model=UserAdminOut)
+async def sync_google_user(payload: SyncGoogleUserRequest):
+    """Sync or provision a verified Google OAuth user via server-to-server integration."""
+    try:
+        user = await get_or_create_google_user(
+            email=payload.email,
+            google_sub=payload.google_sub,
+            name=payload.name,
+            given_name=payload.given_name,
+            family_name=payload.family_name,
+            avatar_url=payload.avatar_url,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    return UserAdminOut.from_model(user)
+
+
 @router.post("/users/{user_id}/reset-password")
 async def reset_user_password(user_id: str, payload: ResetUserPasswordRequest):
-    """Set a new password directly or dispatch a reset link email."""
-    user = await User.find_one(User.id == user_id)
+    """Set a new password directly or dispatch a reset link email.
+    
+    Supports user_id as an SSO user ID (usr_...) or an email address.
+    If the user does not exist yet in SSO and new_password is provided with an email,
+    automatically provisions the user in SSO so accounts stay synchronized.
+    """
+    user = None
+    if user_id.startswith("usr_"):
+        user = await User.find_one(User.id == user_id)
     if not user:
+        user = await User.find_one(User.email == user_id.lower().strip())
+
+    if not user:
+        if payload.new_password and "@" in user_id:
+            clean_email = user_id.lower().strip()
+            user = await create_user(
+                email=clean_email,
+                password=payload.new_password,
+                name=clean_email.split("@")[0],
+                email_verified=True,
+                auth_provider="local",
+            )
+            return {
+                "message": f"User created and password set for {user.email}",
+                "user_id": user.id,
+            }
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     if payload.new_password:
@@ -464,14 +515,20 @@ async def reset_user_password(user_id: str, payload: ResetUserPasswordRequest):
             BrowserSession.user_id == user.id,
             BrowserSession.revoked_at == None,
         ).update({"$set": {"revoked_at": now}})
-        return {"message": f"Password updated directly for {user.email}"}
+        return {
+            "message": f"Password updated directly for {user.email}",
+            "user_id": user.id,
+        }
 
     if payload.send_reset_email:
         res = await create_password_reset_token(user.email)
         if res:
             _, token = res
             await send_password_reset_email(user.email, token)
-            return {"message": f"Password reset email dispatched to {user.email}"}
+            return {
+                "message": f"Password reset email dispatched to {user.email}",
+                "user_id": user.id,
+            }
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unable to generate password reset token")
 
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Specify either new_password or send_reset_email")

@@ -61,6 +61,7 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = Field(
         default="555399944627-qptrrs4eq4j6qqmao5lgpt6r47vhnpd8.apps.googleusercontent.com"
     )
+    GOOGLE_CLIENT_IDS: Union[List[str], str] = Field(default_factory=list)
     GOOGLE_CLIENT_SECRET: Optional[str] = None
 
     # SMTP / Mailpit (dev defaults)
@@ -117,6 +118,30 @@ class Settings(BaseSettings):
         elif isinstance(v, (list, tuple)):
             return [str(i).strip().lower() for i in v if str(i).strip()]
         return []
+
+    @field_validator("GOOGLE_CLIENT_IDS")
+    @classmethod
+    def assemble_google_client_ids(cls, v: Union[List[str], str]) -> List[str]:
+        if isinstance(v, str):
+            clean = v.strip()
+            if clean.startswith("[") and clean.endswith("]"):
+                try:
+                    import json
+                    parsed = json.loads(clean)
+                    if isinstance(parsed, list):
+                        return [str(i).strip() for i in parsed if str(i).strip()]
+                except Exception:
+                    pass
+            return [i.strip() for i in clean.split(",") if i.strip()]
+        elif isinstance(v, (list, tuple)):
+            return [str(i).strip() for i in v if str(i).strip()]
+        return []
+
+    def get_allowed_google_client_ids(self) -> List[str]:
+        ids = list(self.GOOGLE_CLIENT_IDS)
+        if self.GOOGLE_CLIENT_ID and self.GOOGLE_CLIENT_ID not in ids:
+            ids.append(self.GOOGLE_CLIENT_ID)
+        return ids
 
     model_config = SettingsConfigDict(
         env_file=".env",

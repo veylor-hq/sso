@@ -21,7 +21,7 @@ from app.services.authentication import (
     reset_password_with_token,
     verify_email_with_token,
 )
-from app.security.google import verify_google_id_token
+from app.security.google import verify_google_id_token, verify_google_access_token
 from app.services.email import send_password_reset_email, send_verification_email
 from app.services.sessions import create_session, revoke_session
 from app.services.users import create_user, get_or_create_google_user
@@ -225,7 +225,8 @@ async def resend_verification(payload: ResendVerificationRequest):
 
 
 class GoogleLoginRequest(BaseModel):
-    id_token: str
+    id_token: Optional[str] = None
+    access_token: Optional[str] = None
 
 
 @router.post("/google", response_model=UserResponse, dependencies=[Depends(rate_limit_login)])
@@ -234,12 +235,23 @@ async def login_google(
     request: Request,
     response: Response,
 ):
-    """Authenticate or register user via Google ID Token for first-party clients."""
-    google_payload = await verify_google_id_token(payload.id_token)
+    """Authenticate or register user via Google ID Token or Access Token for first-party clients."""
+    if not payload.id_token and not payload.access_token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Either id_token or access_token must be provided",
+        )
+
+    google_payload = None
+    if payload.id_token:
+        google_payload = await verify_google_id_token(payload.id_token)
+    elif payload.access_token:
+        google_payload = await verify_google_access_token(payload.access_token)
+
     if not google_payload:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid, expired, or unverified Google ID Token",
+            detail="Invalid, expired, or unverified Google token",
         )
 
     email = google_payload.get("email")

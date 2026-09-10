@@ -13,6 +13,7 @@ GOOGLE_CERTS_URL = "https://www.googleapis.com/oauth2/v3/certs"
 GOOGLE_TOKENINFO_URL = "https://oauth2.googleapis.com/tokeninfo"
 GOOGLE_ISSUERS = ["https://accounts.google.com", "accounts.google.com"]
 
+GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 _jwks_client: Optional[PyJWKClient] = None
 
 
@@ -38,7 +39,7 @@ async def verify_google_id_token(token_str: str) -> Optional[Dict[str, Any]]:
     Strictly enforces that Google has verified the email address to prevent account takeover.
     """
     settings = get_settings()
-    expected_aud = settings.GOOGLE_CLIENT_ID
+    allowed_auds = settings.get_allowed_google_client_ids()
 
     # Path 1: Local verification using Google's published JWKS
     try:
@@ -48,7 +49,7 @@ async def verify_google_id_token(token_str: str) -> Optional[Dict[str, Any]]:
             token_str,
             signing_key.key,
             algorithms=["RS256"],
-            audience=expected_aud,
+            audience=allowed_auds,
             issuer=GOOGLE_ISSUERS,
             options={"verify_exp": True},
         )
@@ -66,7 +67,7 @@ async def verify_google_id_token(token_str: str) -> Optional[Dict[str, Any]]:
             resp = await client.get(GOOGLE_TOKENINFO_URL, params={"id_token": token_str})
             if resp.status_code == 200:
                 data = resp.json()
-                if data.get("aud") == expected_aud and data.get("iss") in GOOGLE_ISSUERS:
+                if (data.get("aud") in allowed_auds or not allowed_auds) and data.get("iss") in GOOGLE_ISSUERS:
                     if data.get("email") and _is_email_verified(data):
                         return data
                     if data.get("email") and not _is_email_verified(data):
@@ -76,4 +77,25 @@ async def verify_google_id_token(token_str: str) -> Optional[Dict[str, Any]]:
     except Exception as e:
         logger.error("Error connecting to Google tokeninfo: %s", e)
 
+    return None
+
+
+async def verify_google_access_token(access_token: str) -> Optional[Dict[str, Any]]:
+    """Verify Google access token by querying Google's userinfo endpoint."""
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                GOOGLE_USERINFO_URL,
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("email") and _is_email_verified(data):
+                    return data
+                if data.get("email") and not _is_email_verified(data):
+                    logger.warning("Rejected Google access token: email is unverified (%s)", data.get("email"))
+                    return None
+            logger.warning("Google userinfo rejected access token: %s", resp.text)
+    except Exception as e:
+        logger.error("Error connecting to Google userinfo: %s", e)
     return None
