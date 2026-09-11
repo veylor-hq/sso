@@ -11,6 +11,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     build-essential \
+    tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 # Install poetry or install directly via pip

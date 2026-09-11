@@ -20,6 +20,8 @@ builder:
 
 volumes:
   - "/var/lib/velo/sso_keys:/app/keys"
+  - "/etc/localtime:/etc/localtime:ro"
+  - "/etc/timezone:/etc/timezone:ro"
 
 proxy:
   ssl: true
