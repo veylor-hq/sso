@@ -64,7 +64,7 @@
             </div>
             <div>
                 <p class="text-[#71717a] uppercase tracking-wider">Account Initialized</p>
-                <p class="text-[#a1a1aa] mt-1 bg-[#161616] p-2 border border-[#2a2a2a]">{{ user.created_at.strftime("%Y-%m-%d %H:%M UTC") }}</p>
+                <p class="text-[#a1a1aa] mt-1 bg-[#161616] p-2 border border-[#2a2a2a]">{{ format_local_time(user.created_at) }}</p>
             </div>
         </div>
     </div>
@@ -91,7 +91,7 @@
                     </div>
                     <p class="text-[#71717a] text-[11px]">
                         IP: <span class="text-[#a1a1aa]">{{ s.ip_address or "127.0.0.1" }}</span> &bull;
-                        LAST ACTIVITY: <span class="text-[#a1a1aa]">{{ s.last_seen_at.strftime("%H:%M:%S UTC") }}</span> &bull;
+                        LAST ACTIVITY: <span class="text-[#a1a1aa]">{{ format_local_time(s.last_seen_at, '%H:%M:%S %Z') }}</span> &bull;
                         REF: <span class="text-[#52525b]">{{ s.id }}</span>
                     </p>
                 </div>

@@ -32,8 +32,22 @@ from app.services.sessions import create_session, list_user_sessions, revoke_ses
 from app.services.users import create_user, get_or_create_google_user
 from app.services.client_registry import resolve_and_verify_service_from_request
 
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+
+LONDON_TZ = ZoneInfo("Europe/London")
+
+def format_local_time(dt, fmt="%Y-%m-%d %H:%M %Z"):
+    if not dt:
+        return "Never"
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(LONDON_TZ).strftime(fmt)
+
 router = APIRouter(include_in_schema=False)
 templates = Jinja2Templates(directory="app/templates")
+templates.env.filters["local_time"] = format_local_time
+templates.env.globals["format_local_time"] = format_local_time
 
 
 def is_safe_redirect_url(url: Optional[str]) -> bool:
